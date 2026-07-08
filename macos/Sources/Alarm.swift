@@ -45,7 +45,6 @@ final class AlarmController: NSObject {
                 .hideDock, .hideMenuBar, .disableProcessSwitching,
                 .disableForceQuit, .disableSessionTermination, .disableHideApplication,
             ]
-            synth.start()
         } else {
             escMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
                 if event.keyCode == 53 {
@@ -56,13 +55,19 @@ final class AlarmController: NSObject {
             }
         }
         NSApp.setActivationPolicy(.regular)
+        buildWindows(reason: reason, config: config)
+        if !preview { synth.start() }
         if CGCaptureAllDisplays() == .success {
             displaysCaptured = true
+            let shieldLevel = NSWindow.Level(rawValue: Int(CGShieldingWindowLevel()) + 1)
+            for window in windows {
+                window.level = shieldLevel
+                window.orderFrontRegardless()
+            }
             logLine(preview ? "displays captured (preview)" : "displays captured — space switching disabled")
         } else {
             logLine("WARNING: could not capture displays — full-screen apps may escape the lock via space switching")
         }
-        buildWindows(reason: reason, config: config)
         entryDeadline = Date().addingTimeInterval(Double(config?.entryDelaySeconds ?? 15))
         countdownTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
             self?.tickCountdown()

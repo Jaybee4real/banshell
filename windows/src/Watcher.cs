@@ -25,7 +25,7 @@ public class Watcher : IDisposable
         state = BanshellConfig.LoadState();
         hooks.InputDetected += OnInput;
         hooks.Start();
-        tick = new System.Windows.Forms.Timer { Interval = 100 };
+        tick = new System.Windows.Forms.Timer { Interval = 50 };
         tick.Tick += (_, _) => Tick();
         tick.Start();
         if (state.Triggered)
@@ -97,12 +97,13 @@ public class Watcher : IDisposable
         if (!state.Armed || state.Triggered) return;
         if (monitoringStartsAt == null || DateTime.Now < monitoringStartsAt) return;
 
-        if (Config.MotionTrigger && accelBaseline == null)
+        var accelerometerAllowed = Config.MotionTrigger && MotionSensingAllowedNow();
+        if (accelerometerAllowed && accelBaseline == null)
             accelBaseline = accelerometer.Read();
         if (Config.PowerTrigger && powerBaselineOnline == null)
             powerBaselineOnline = SystemInformation.PowerStatus.PowerLineStatus == PowerLineStatus.Online;
 
-        if (Config.MotionTrigger && accelBaseline is { } baseline && accelerometer.Read() is { } reading)
+        if (accelerometerAllowed && accelBaseline is { } baseline && accelerometer.Read() is { } reading)
         {
             var delta = AccelerometerMonitor.Delta(baseline, reading);
             if (delta >= Config.AccelDeltaG)
@@ -129,6 +130,25 @@ public class Watcher : IDisposable
             state.LastAutoArmDay = today;
             Arm();
         }
+    }
+
+    private bool MotionSensingAllowedNow()
+    {
+        var status = SystemInformation.PowerStatus;
+        bool charging = status.PowerLineStatus == PowerLineStatus.Online;
+        if (charging)
+        {
+            if (!Config.MotionOnCharger) return false;
+        }
+        else
+        {
+            if (!Config.MotionOnBattery) return false;
+            int percent = status.BatteryLifePercent >= 0 && status.BatteryLifePercent <= 1
+                ? (int)(status.BatteryLifePercent * 100)
+                : 100;
+            if (percent < Config.MotionBatteryFloor) return false;
+        }
+        return true;
     }
 
     public void ClearTriggeredAndDisarm() => Disarm();

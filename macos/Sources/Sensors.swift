@@ -38,6 +38,21 @@ func onACPower() -> Bool {
     return (sourceType as String) == "AC Power"
 }
 
+func batteryPercent() -> Int? {
+    guard let snapshot = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
+          let sources = IOPSCopyPowerSourcesList(snapshot)?.takeRetainedValue() as? [CFTypeRef] else {
+        return nil
+    }
+    for source in sources {
+        guard let description = IOPSGetPowerSourceDescription(snapshot, source)?.takeUnretainedValue()
+            as? [String: Any],
+            let current = description[kIOPSCurrentCapacityKey as String] as? Int,
+            let maximum = description[kIOPSMaxCapacityKey as String] as? Int, maximum > 0 else { continue }
+        return Int((Double(current) / Double(maximum) * 100).rounded())
+    }
+    return nil
+}
+
 func inputMonitoringGranted() -> Bool {
     IOHIDCheckAccess(kIOHIDRequestTypeListenEvent) == kIOHIDAccessTypeGranted
 }

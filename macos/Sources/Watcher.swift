@@ -8,6 +8,8 @@ final class Watcher {
     let lidSensor = LidSensor()
     private let inputTap = InputTap()
     private let alarm = AlarmController()
+    let camera = CameraMotion()
+    private var cameraRunning = false
     private var lidBaseline: Double?
     private var powerBaselineAC: Bool?
     private var monitoringStartsAt: Date?
@@ -26,6 +28,9 @@ final class Watcher {
         self.state = loadState()
         alarm.onDisarm = { [weak self] in
             self?.queue.async { self?.applyDisarm() }
+        }
+        camera.onMotion = { [weak self] in
+            self?.queue.async { self?.handleCameraMotion() }
         }
     }
 
@@ -52,7 +57,7 @@ final class Watcher {
             logLine("resumed armed — monitoring in 5s")
         }
         let dispatchTimer = DispatchSource.makeTimerSource(queue: queue)
-        dispatchTimer.schedule(deadline: .now() + 0.1, repeating: 0.1)
+        dispatchTimer.schedule(deadline: .now() + 0.05, repeating: 0.05)
         dispatchTimer.setEventHandler { [weak self] in self?.tick() }
         dispatchTimer.resume()
         timer = dispatchTimer
@@ -106,13 +111,14 @@ final class Watcher {
 
     private func tick() {
         tickCounter += 1
-        if tickCounter % 10 == 0 {
+        if tickCounter % 20 == 0 {
             checkExternalState()
             checkAutoArm()
         }
         guard state.armed, !state.triggered else { return }
         guard let startsAt = monitoringStartsAt else { return }
         guard Date() >= startsAt else { return }
+        if tickCounter % 20 == 0 { evaluateCamera() }
         if lidBaseline == nil, config.lidTrigger, let angle = lidSensor.readAngle() {
             lidBaseline = angle
             logLine("lid baseline captured: \(angle)°")
@@ -135,6 +141,35 @@ final class Watcher {
         guard state.armed, !state.triggered else { return }
         guard let startsAt = monitoringStartsAt, Date() >= startsAt else { return }
         trigger(reason: "keyboard or trackpad touched")
+    }
+
+    private func handleCameraMotion() {
+        guard state.armed, !state.triggered, cameraRunning else { return }
+        guard let startsAt = monitoringStartsAt, Date() >= startsAt else { return }
+        trigger(reason: "device moved — camera")
+    }
+
+    private func lidIsOpen() -> Bool {
+        guard let angle = lidSensor.readAngle() else { return true }
+        return angle > 5
+    }
+
+    private func evaluateCamera() {
+        let shouldRun = config.motionSensingAllowedNow() && lidIsOpen()
+        if shouldRun, !cameraRunning {
+            camera.start()
+            cameraRunning = true
+        } else if !shouldRun, cameraRunning {
+            camera.stop()
+            cameraRunning = false
+        }
+    }
+
+    private func stopCamera() {
+        if cameraRunning {
+            camera.stop()
+            cameraRunning = false
+        }
     }
 
     private func checkAutoArm() {
@@ -183,15 +218,19 @@ final class Watcher {
         powerBaselineAC = nil
         monitoringStartsAt = Date().addingTimeInterval(Double(config.exitDelaySeconds))
         writeState()
-        if runProcess("/usr/bin/sudo", ["-n", "/usr/bin/pmset", "disablesleep", "1"]) == 0 {
-            logLine("sleep disabled — closed-lid protection active")
+        if config.watchLidClosed {
+            if runProcess("/usr/bin/sudo", ["-n", "/usr/bin/pmset", "disablesleep", "1"]) == 0 {
+                logLine("sleep disabled — closed-lid protection active")
+            } else {
+                logLine("WARNING: could not disable sleep (sudoers not set up) — closed-lid protection off")
+            }
+            if sleepAssertion == 0 {
+                IOPMAssertionCreateWithName("PreventUserIdleSystemSleep" as CFString,
+                                            IOPMAssertionLevel(kIOPMAssertionLevelOn),
+                                            "BANSHELL armed" as CFString, &sleepAssertion)
+            }
         } else {
-            logLine("WARNING: could not disable sleep (sudoers not set up) — closed-lid protection off")
-        }
-        if sleepAssertion == 0 {
-            IOPMAssertionCreateWithName("PreventUserIdleSystemSleep" as CFString,
-                                        IOPMAssertionLevel(kIOPMAssertionLevelOn),
-                                        "BANSHELL armed" as CFString, &sleepAssertion)
+            logLine("watch-when-lid-closed off — machine may sleep when the lid shuts")
         }
         logLine("ARMED — monitoring starts in \(config.exitDelaySeconds)s")
         notifyChange()
@@ -204,6 +243,7 @@ final class Watcher {
         lidBaseline = nil
         powerBaselineAC = nil
         monitoringStartsAt = nil
+        stopCamera()
         writeState()
         runProcess("/usr/bin/sudo", ["-n", "/usr/bin/pmset", "disablesleep", "0"])
         if sleepAssertion != 0 {
@@ -217,6 +257,7 @@ final class Watcher {
     private func trigger(reason: String) {
         state.triggered = true
         state.reason = reason
+        stopCamera()
         writeState()
         notifyChange()
         DispatchQueue.main.async { self.alarm.begin(reason: reason) }

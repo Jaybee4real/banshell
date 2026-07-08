@@ -21,6 +21,10 @@ public class SettingsForm : Form
     private readonly TextBox ownerEmailBox;
     private readonly TextBox ownerMessageBox;
     private readonly CheckBox autoUpdateBox;
+    private readonly CheckBox motionOnChargerBox;
+    private readonly CheckBox motionOnBatteryBox;
+    private readonly TrackBar batteryFloorBar;
+    private readonly Label batteryFloorLabel;
     private readonly Label readinessLabel;
     private readonly System.Windows.Forms.Timer liveTimer;
 
@@ -85,6 +89,22 @@ public class SettingsForm : Form
         inputBox = new CheckBox { Text = "Keyboard or mouse touched", AutoSize = true };
         inputBox.CheckedChanged += (_, _) => SaveFromControls();
         layout.Controls.Add(inputBox);
+
+        layout.Controls.Add(Section("ACCELEROMETER POWER RULES"));
+        motionOnChargerBox = new CheckBox { Text = "Use accelerometer while charging", AutoSize = true };
+        motionOnChargerBox.CheckedChanged += (_, _) => SaveFromControls();
+        layout.Controls.Add(motionOnChargerBox);
+        motionOnBatteryBox = new CheckBox { Text = "Use accelerometer on battery", AutoSize = true };
+        motionOnBatteryBox.CheckedChanged += (_, _) => SaveFromControls();
+        layout.Controls.Add(motionOnBatteryBox);
+        var floorRow = Row();
+        floorRow.Controls.Add(new Label { Text = "Turn off below", AutoSize = true, Padding = new Padding(0, 6, 0, 0) });
+        batteryFloorBar = new TrackBar { Minimum = 0, Maximum = 90, Value = 20, Width = 160, TickFrequency = 10 };
+        batteryFloorBar.ValueChanged += (_, _) => SaveFromControls();
+        batteryFloorLabel = new Label { AutoSize = true, Padding = new Padding(0, 6, 0, 0) };
+        floorRow.Controls.Add(batteryFloorBar);
+        floorRow.Controls.Add(batteryFloorLabel);
+        layout.Controls.Add(floorRow);
 
         layout.Controls.Add(Section("TIMING"));
         var timingRow = Row();
@@ -190,6 +210,10 @@ public class SettingsForm : Form
         ownerEmailBox.Text = config.OwnerEmail;
         ownerMessageBox.Text = config.OwnerMessage;
         autoUpdateBox.Checked = config.AutoUpdateCheck;
+        motionOnChargerBox.Checked = config.MotionOnCharger;
+        motionOnBatteryBox.Checked = config.MotionOnBattery;
+        batteryFloorBar.Value = Math.Clamp(config.MotionBatteryFloor, batteryFloorBar.Minimum, batteryFloorBar.Maximum);
+        batteryFloorLabel.Text = $"{config.MotionBatteryFloor}%";
         using var runKey = Registry.CurrentUser.OpenSubKey(RunKeyPath);
         autostartBox.Checked = runKey?.GetValue("Banshell") != null;
         UpdateLive();
@@ -211,6 +235,10 @@ public class SettingsForm : Form
         config.OwnerEmail = ownerEmailBox.Text;
         config.OwnerMessage = ownerMessageBox.Text;
         config.AutoUpdateCheck = autoUpdateBox.Checked;
+        config.MotionOnCharger = motionOnChargerBox.Checked;
+        config.MotionOnBattery = motionOnBatteryBox.Checked;
+        config.MotionBatteryFloor = batteryFloorBar.Value;
+        batteryFloorLabel.Text = $"{batteryFloorBar.Value}%";
         config.Save();
         watcher.ReloadConfig(config);
     }

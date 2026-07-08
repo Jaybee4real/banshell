@@ -21,6 +21,13 @@ final class SettingsWindowController: NSObject, NSWindowDelegate, NSTextFieldDel
     private var ownerEmailField: NSTextField!
     private var ownerMessageField: NSTextField!
     private var autoUpdateCheckbox: NSButton!
+    private var cameraCheckbox: NSButton!
+    private var cameraStatusLabel: NSTextField!
+    private var onChargerCheckbox: NSButton!
+    private var onBatteryCheckbox: NSButton!
+    private var batteryFloorSlider: NSSlider!
+    private var batteryFloorLabel: NSTextField!
+    private var lidClosedCheckbox: NSButton!
     private var angleTimer: Timer?
     private var sudoNotice: (message: String, until: Date)?
 
@@ -45,6 +52,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate, NSTextFieldDel
         angleTimer = Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] _ in
             self?.updateLiveAngle()
             self?.refreshReadiness()
+            self?.updateCameraStatus()
         }
     }
 
@@ -120,6 +128,48 @@ final class SettingsWindowController: NSObject, NSWindowDelegate, NSTextFieldDel
         touchCheckbox = NSButton(checkboxWithTitle: "Keyboard or trackpad touched",
                                  target: self, action: #selector(controlChanged))
         stack.addArrangedSubview(touchCheckbox)
+
+        stack.addArrangedSubview(spacer(8))
+        stack.addArrangedSubview(sectionLabel("Motion — camera (catches movement with the lid open)"))
+        cameraCheckbox = NSButton(checkboxWithTitle: "Detect movement with the camera",
+                                  target: self, action: #selector(cameraToggled))
+        stack.addArrangedSubview(cameraCheckbox)
+        cameraStatusLabel = NSTextField(labelWithString: "")
+        cameraStatusLabel.font = NSFont.systemFont(ofSize: 11)
+        cameraStatusLabel.textColor = .secondaryLabelColor
+        let cameraStatusRow = NSStackView()
+        cameraStatusRow.orientation = .horizontal
+        cameraStatusRow.addArrangedSubview(indent())
+        cameraStatusRow.addArrangedSubview(cameraStatusLabel)
+        stack.addArrangedSubview(cameraStatusRow)
+
+        let onChargerRow = NSStackView()
+        onChargerRow.orientation = .horizontal
+        onChargerCheckbox = NSButton(checkboxWithTitle: "Use camera while charging",
+                                     target: self, action: #selector(controlChanged))
+        onBatteryCheckbox = NSButton(checkboxWithTitle: "Use camera on battery",
+                                     target: self, action: #selector(controlChanged))
+        onChargerRow.addArrangedSubview(indent())
+        onChargerRow.addArrangedSubview(onChargerCheckbox)
+        onChargerRow.addArrangedSubview(onBatteryCheckbox)
+        stack.addArrangedSubview(onChargerRow)
+
+        let floorRow = NSStackView()
+        floorRow.orientation = .horizontal
+        floorRow.spacing = 6
+        batteryFloorSlider = NSSlider(value: 20, minValue: 0, maxValue: 90,
+                                      target: self, action: #selector(controlChanged))
+        batteryFloorSlider.widthAnchor.constraint(equalToConstant: 160).isActive = true
+        batteryFloorLabel = NSTextField(labelWithString: "20%")
+        floorRow.addArrangedSubview(indent())
+        floorRow.addArrangedSubview(NSTextField(labelWithString: "Turn camera off below"))
+        floorRow.addArrangedSubview(batteryFloorSlider)
+        floorRow.addArrangedSubview(batteryFloorLabel)
+        stack.addArrangedSubview(floorRow)
+
+        lidClosedCheckbox = NSButton(checkboxWithTitle: "Keep watching when the lid is closed",
+                                     target: self, action: #selector(controlChanged))
+        stack.addArrangedSubview(lidClosedCheckbox)
 
         stack.addArrangedSubview(spacer(8))
         stack.addArrangedSubview(sectionLabel("Timing"))
@@ -223,7 +273,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate, NSTextFieldDel
             stack.bottomAnchor.constraint(lessThanOrEqualTo: content.bottomAnchor),
         ])
         panel.contentView = content
-        panel.setContentSize(NSSize(width: 470, height: 720))
+        panel.setContentSize(NSSize(width: 470, height: 880))
         window = panel
     }
 
@@ -256,6 +306,39 @@ final class SettingsWindowController: NSObject, NSWindowDelegate, NSTextFieldDel
         ownerEmailField.stringValue = config.ownerEmail ?? ""
         ownerMessageField.stringValue = config.ownerMessage ?? ""
         autoUpdateCheckbox.state = config.autoUpdateCheck != false ? .on : .off
+        cameraCheckbox.state = config.cameraMotionOn ? .on : .off
+        onChargerCheckbox.state = config.allowMotionOnCharger ? .on : .off
+        onBatteryCheckbox.state = config.allowMotionOnBattery ? .on : .off
+        batteryFloorSlider.doubleValue = Double(config.batteryFloor)
+        batteryFloorLabel.stringValue = "\(config.batteryFloor)%"
+        lidClosedCheckbox.state = config.watchLidClosed ? .on : .off
+        updateCameraStatus()
+    }
+
+    private func updateCameraStatus() {
+        let power = onACPower() ? "charging" : "on battery"
+        let percentText = batteryPercent().map { " · \($0)%" } ?? ""
+        if !config.cameraMotionOn {
+            cameraStatusLabel.stringValue = "Off. \(power)\(percentText)."
+        } else if !watcher.camera.authorized {
+            cameraStatusLabel.stringValue = "⚠ Needs camera permission — toggle it on to grant."
+        } else if config.motionSensingAllowedNow() {
+            cameraStatusLabel.stringValue = "Active when armed & lid open. \(power)\(percentText)."
+        } else {
+            cameraStatusLabel.stringValue = "Paused by your power rules right now. \(power)\(percentText)."
+        }
+    }
+
+    @objc private func cameraToggled() {
+        if cameraCheckbox.state == .on, !watcher.camera.authorized {
+            watcher.camera.requestAccess { [weak self] granted in
+                guard let self else { return }
+                if !granted { self.cameraCheckbox.state = .off }
+                self.controlChanged()
+            }
+            return
+        }
+        controlChanged()
     }
 
     func controlTextDidChange(_ notification: Notification) {
@@ -279,8 +362,15 @@ final class SettingsWindowController: NSObject, NSWindowDelegate, NSTextFieldDel
         config.exitDelaySeconds = exitChoices[max(0, exitDelayPopup.indexOfSelectedItem)]
         config.entryDelaySeconds = entryChoices[max(0, entryDelayPopup.indexOfSelectedItem)]
         config.autoUpdateCheck = autoUpdateCheckbox.state == .on
+        config.cameraMotion = cameraCheckbox.state == .on
+        config.motionOnCharger = onChargerCheckbox.state == .on
+        config.motionOnBattery = onBatteryCheckbox.state == .on
+        config.motionBatteryFloor = Int(batteryFloorSlider.doubleValue)
+        config.watchWhenLidClosed = lidClosedCheckbox.state == .on
+        batteryFloorLabel.stringValue = "\(Int(batteryFloorSlider.doubleValue))%"
         saveConfig(config)
         watcher.reloadConfig(config)
+        updateCameraStatus()
     }
 
     @objc private func checkForUpdatesNow() {

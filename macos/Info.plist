@@ -5,14 +5,15 @@
     <key>CFBundleName</key><string>Banshell</string>
     <key>CFBundleDisplayName</key><string>Banshell</string>
     <key>CFBundleIdentifier</key><string>com.jaybee.banshell</string>
-    <key>CFBundleVersion</key><string>1.5.0</string>
-    <key>CFBundleShortVersionString</key><string>1.5.0</string>
+    <key>CFBundleVersion</key><string>1.6.0</string>
+    <key>CFBundleShortVersionString</key><string>1.6.0</string>
     <key>CFBundleExecutable</key><string>banshell</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleIconFile</key><string>Banshell</string>
     <key>LSMinimumSystemVersion</key><string>13.0</string>
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>
+    <key>NSCameraUsageDescription</key><string>BANSHELL uses the camera only while armed to detect the laptop being physically moved. No video is recorded or sent anywhere.</string>
     <key>NSHumanReadableCopyright</key><string>MIT License</string>
 </dict>
 </plist>

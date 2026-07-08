@@ -8,19 +8,26 @@ I built this because I wanted my MacBook to scream if anyone grabbed it at night
 
 ## How it detects a grab
 
-There's no single perfect signal, so it watches three at once. Any of them fires the alarm.
+There's no single perfect signal, so it watches several at once. Any of them fires the alarm.
 
 On macOS:
 
 | Trigger | What it catches |
 |---|---|
-| Lid hinge angle (polled 10x/sec) | Lifting or carrying wobbles the hinge. Opening or closing the lid swings it massively. |
+| Lid hinge angle (polled 20x/sec) | Lifting or carrying wobbles the hinge. Opening or closing the lid swings it massively. |
 | Charger disconnect | Yanking the power cable. |
 | Input tap | Any key press, click, scroll, or trackpad touch. |
+| Camera motion (opt-in) | The laptop being lifted or carried with the lid open, which the hinge sensor can miss. |
 
-On Windows, the motion trigger uses a real accelerometer when the machine has one (many Windows laptops and all 2-in-1s do). The charger and input triggers work the same way.
+Apple Silicon Macs have no accelerometer — Apple removed it years ago — so the hinge sensor is the only built-in inertial signal, and it only sees the lid move relative to the base. To catch the machine being physically moved with the lid untouched, turn on the camera motion trigger in Settings: while armed it watches the webcam for a sudden scene change. It's off by default because it lights the green camera LED and needs camera permission.
 
-The motion threshold is tunable in Settings. The default (3° on Mac, 0.06g on Windows) sits above ambient desk vibration and below "someone picked this up."
+On Windows, the motion trigger uses a real accelerometer when the machine has one (many laptops and all 2-in-1s do), so it catches physical movement directly without the camera. The charger and input triggers work the same way.
+
+The motion threshold is tunable in Settings. The default (2° on Mac, 0.06g on Windows) sits above ambient noise — the Mac hinge sensor reads dead-still at rest — and below "someone picked this up."
+
+### Power and battery rules
+
+Camera watching (Mac) and the accelerometer (Windows) cost battery, so both are power-aware. In Settings you choose whether they run while charging, while on battery, or both, and set a battery-floor percentage below which they switch off automatically to save power — the cheap triggers (hinge, charger, input) keep running regardless. "Keep watching when the lid is closed" controls whether BANSHELL holds the machine awake to stay armed with the lid shut, or lets it sleep to save battery.
 
 ## What happens when it fires
 

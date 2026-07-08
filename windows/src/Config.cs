@@ -21,6 +21,9 @@ public class BanshellConfig
     public string OwnerEmail { get; set; } = "";
     public string OwnerMessage { get; set; } = "";
     public bool AutoUpdateCheck { get; set; } = true;
+    public bool MotionOnCharger { get; set; } = true;
+    public bool MotionOnBattery { get; set; } = false;
+    public int MotionBatteryFloor { get; set; } = 20;
 
     public bool HasPin => PinHashHex.Length > 0;
 
