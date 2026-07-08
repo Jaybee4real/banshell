@@ -1,6 +1,6 @@
 import AppKit
 
-final class SettingsWindowController: NSObject, NSWindowDelegate {
+final class SettingsWindowController: NSObject, NSWindowDelegate, NSTextFieldDelegate {
     private let watcher: Watcher
     private var window: NSWindow?
     private var config: Config
@@ -17,6 +17,9 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
     private var readinessLid: NSTextField!
     private var readinessSudo: NSTextField!
     private var readinessInput: NSTextField!
+    private var ownerNameField: NSTextField!
+    private var ownerEmailField: NSTextField!
+    private var ownerMessageField: NSTextField!
     private var angleTimer: Timer?
     private var sudoNotice: (message: String, until: Date)?
 
@@ -142,6 +145,25 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         stack.addArrangedSubview(pinButton)
 
         stack.addArrangedSubview(spacer(8))
+        stack.addArrangedSubview(sectionLabel("Owner Card — shown on the alarm screen"))
+        ownerNameField = NSTextField(string: "")
+        ownerNameField.placeholderString = "Your name"
+        ownerEmailField = NSTextField(string: "")
+        ownerEmailField.placeholderString = "Contact email"
+        ownerMessageField = NSTextField(wrappingLabelWithString: "")
+        ownerMessageField.isEditable = true
+        ownerMessageField.isBezeled = true
+        ownerMessageField.isSelectable = true
+        ownerMessageField.placeholderString = "Personal message, e.g. \"This laptop is protected and traceable. Return it.\""
+        for field in [ownerNameField, ownerEmailField, ownerMessageField] {
+            field!.translatesAutoresizingMaskIntoConstraints = false
+            field!.widthAnchor.constraint(equalToConstant: 400).isActive = true
+            field!.delegate = self
+            stack.addArrangedSubview(field!)
+        }
+        ownerMessageField.heightAnchor.constraint(equalToConstant: 52).isActive = true
+
+        stack.addArrangedSubview(spacer(8))
         stack.addArrangedSubview(sectionLabel("Readiness"))
         readinessLid = NSTextField(labelWithString: "")
         stack.addArrangedSubview(readinessLid)
@@ -185,7 +207,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
             stack.bottomAnchor.constraint(lessThanOrEqualTo: content.bottomAnchor),
         ])
         panel.contentView = content
-        panel.setContentSize(NSSize(width: 470, height: 560))
+        panel.setContentSize(NSSize(width: 470, height: 720))
         window = panel
     }
 
@@ -214,6 +236,17 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         sensitivityLabel.stringValue = "\(Int(config.lidDeltaDegrees))°"
         exitDelayPopup.selectItem(at: exitChoices.firstIndex(of: config.exitDelaySeconds) ?? 1)
         entryDelayPopup.selectItem(at: entryChoices.firstIndex(of: config.entryDelaySeconds) ?? 2)
+        ownerNameField.stringValue = config.ownerName ?? ""
+        ownerEmailField.stringValue = config.ownerEmail ?? ""
+        ownerMessageField.stringValue = config.ownerMessage ?? ""
+    }
+
+    func controlTextDidChange(_ notification: Notification) {
+        config.ownerName = ownerNameField.stringValue
+        config.ownerEmail = ownerEmailField.stringValue
+        config.ownerMessage = ownerMessageField.stringValue
+        saveConfig(config)
+        watcher.reloadConfig(config)
     }
 
     @objc private func controlChanged() {

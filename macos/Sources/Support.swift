@@ -1,7 +1,7 @@
 import CryptoKit
 import Foundation
 
-let banshellVersion = "1.1.2"
+let banshellVersion = "1.2.0"
 let launchdLabel = "com.jaybee.banshell"
 
 struct Config: Codable {
@@ -16,6 +16,9 @@ struct Config: Codable {
     var lidTrigger: Bool
     var powerTrigger: Bool
     var inputTrigger: Bool
+    var ownerName: String?
+    var ownerEmail: String?
+    var ownerMessage: String?
 
     static var defaults: Config {
         Config(pinSaltHex: "", pinHashHex: "", armHour: 23, armMinute: 0,

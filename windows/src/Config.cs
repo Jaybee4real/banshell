@@ -17,6 +17,9 @@ public class BanshellConfig
     public bool MotionTrigger { get; set; } = true;
     public bool PowerTrigger { get; set; } = true;
     public bool InputTrigger { get; set; } = true;
+    public string OwnerName { get; set; } = "";
+    public string OwnerEmail { get; set; } = "";
+    public string OwnerMessage { get; set; } = "";
 
     public bool HasPin => PinHashHex.Length > 0;
 

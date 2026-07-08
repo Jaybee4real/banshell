@@ -29,6 +29,8 @@ The motion threshold is tunable in Settings. The default (3° on Mac, 0.06g on W
 3. No code? Output gets forced to the built-in speakers, the volume is slammed to 100% and re-asserted every 150ms, and the siren starts. Volume keys do nothing. Plugging in headphones does nothing.
 4. The siren runs until the correct code is entered. The code is stored as a salted SHA-256 hash, never in plain text.
 
+The lock screen doubles as an owner card: your name, contact email, and a personal message, all set in Settings. Whoever is holding the machine gets told exactly whose it is while the siren makes the point. Check the design any time with `banshell preview`: same screen, no siren, Esc closes it.
+
 On macOS, killing the process doesn't help either: launchd restarts it in under a second and it resumes the siren from saved state.
 
 ## Install
@@ -52,7 +54,7 @@ To make it start at login and respawn if killed:
 /Applications/Banshell.app/Contents/MacOS/banshell install
 ```
 
-There's a full CLI too (`banshell status`, `arm`, `disarm`, `drill`, `sensors`) if you'd rather script it.
+There's a full CLI too (`banshell status`, `arm`, `disarm`, `drill`, `preview`, `sensors`) if you'd rather script it.
 
 ### Windows (10/11, 64-bit)
 
@@ -66,7 +68,7 @@ Fire a drill from the menu (Test Siren) or with `banshell drill`. The real siren
 
 ## Settings
 
-Everything lives in the Settings window: arm time, which triggers are active, motion sensitivity with a live sensor readout, the walk-away delay (so arming doesn't trap you at your own desk), the siren delay, and the disarm code. Changes save immediately.
+Everything lives in the Settings window: arm time, which triggers are active, motion sensitivity with a live sensor readout, the walk-away delay (so arming doesn't trap you at your own desk), the siren delay, the disarm code, and the owner card shown on the alarm screen. Changes save immediately.
 
 ## What this can't do
 

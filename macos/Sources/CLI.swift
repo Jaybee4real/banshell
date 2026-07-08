@@ -135,6 +135,15 @@ func runCLI(_ command: String) {
         let app = NSApplication.shared
         app.setActivationPolicy(.accessory)
         app.run()
+    case "preview":
+        let alarm = AlarmController()
+        alarm.onDisarm = { exit(0) }
+        let app = NSApplication.shared
+        app.setActivationPolicy(.accessory)
+        DispatchQueue.main.async {
+            alarm.begin(reason: "design preview — no siren", preview: true)
+        }
+        app.run()
     case "install":
         commandInstall()
     case "uninstall":
@@ -156,6 +165,7 @@ func runCLI(_ command: String) {
           arm         arm now
           disarm      disarm (asks for code)
           drill       test the full alarm right now
+          preview     show the alarm screen silently (Esc closes)
           sensors     live lid-angle / power feed
           setpin      change the disarm code
           uninstall   stop and remove the watcher

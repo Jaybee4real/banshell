@@ -17,6 +17,9 @@ public class SettingsForm : Form
     private readonly NumericUpDown exitDelay;
     private readonly NumericUpDown entryDelay;
     private readonly CheckBox autostartBox;
+    private readonly TextBox ownerNameBox;
+    private readonly TextBox ownerEmailBox;
+    private readonly TextBox ownerMessageBox;
     private readonly Label readinessLabel;
     private readonly System.Windows.Forms.Timer liveTimer;
 
@@ -104,6 +107,22 @@ public class SettingsForm : Form
         autostartBox.CheckedChanged += (_, _) => ApplyAutostart();
         layout.Controls.Add(autostartBox);
 
+        layout.Controls.Add(Section("OWNER CARD — SHOWN ON THE ALARM SCREEN"));
+        ownerNameBox = new TextBox { Width = 380, PlaceholderText = "Your name" };
+        ownerEmailBox = new TextBox { Width = 380, PlaceholderText = "Contact email" };
+        ownerMessageBox = new TextBox
+        {
+            Width = 380,
+            Height = 56,
+            Multiline = true,
+            PlaceholderText = "Personal message, e.g. \"This laptop is protected and traceable. Return it.\"",
+        };
+        foreach (var ownerBox in new[] { ownerNameBox, ownerEmailBox, ownerMessageBox })
+        {
+            ownerBox.TextChanged += (_, _) => SaveFromControls();
+            layout.Controls.Add(ownerBox);
+        }
+
         layout.Controls.Add(Section("READINESS"));
         readinessLabel = new Label { AutoSize = true, MaximumSize = new Size(430, 0) };
         layout.Controls.Add(readinessLabel);
@@ -155,6 +174,9 @@ public class SettingsForm : Form
         sensitivityLabel.Text = $"{config.AccelDeltaG:F2}g";
         exitDelay.Value = Math.Clamp(config.ExitDelaySeconds, (int)exitDelay.Minimum, (int)exitDelay.Maximum);
         entryDelay.Value = Math.Clamp(config.EntryDelaySeconds, (int)entryDelay.Minimum, (int)entryDelay.Maximum);
+        ownerNameBox.Text = config.OwnerName;
+        ownerEmailBox.Text = config.OwnerEmail;
+        ownerMessageBox.Text = config.OwnerMessage;
         using var runKey = Registry.CurrentUser.OpenSubKey(RunKeyPath);
         autostartBox.Checked = runKey?.GetValue("Banshell") != null;
         UpdateLive();
@@ -172,6 +194,9 @@ public class SettingsForm : Form
         sensitivityLabel.Text = $"{config.AccelDeltaG:F2}g";
         config.ExitDelaySeconds = (int)exitDelay.Value;
         config.EntryDelaySeconds = (int)entryDelay.Value;
+        config.OwnerName = ownerNameBox.Text;
+        config.OwnerEmail = ownerEmailBox.Text;
+        config.OwnerMessage = ownerMessageBox.Text;
         config.Save();
         watcher.ReloadConfig(config);
     }
