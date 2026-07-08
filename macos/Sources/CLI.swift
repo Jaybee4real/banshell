@@ -36,7 +36,8 @@ func commandInstall() {
     print("""
 
     For closed-lid protection, allow pmset without a password (one time):
-      \(sudoersCommand)
+
+    \(sudoersCommand)
 
     For the touch trigger: System Settings → Privacy & Security → Input Monitoring → add Banshee.
     """)

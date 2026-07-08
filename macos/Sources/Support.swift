@@ -158,5 +158,9 @@ func sudoersReady() -> Bool {
 
 var sudoersCommand: String {
     let username = NSUserName()
-    return "echo '\(username) ALL=(root) NOPASSWD: /usr/bin/pmset disablesleep 0, /usr/bin/pmset disablesleep 1' | sudo tee /etc/sudoers.d/banshee && sudo chmod 440 /etc/sudoers.d/banshee"
+    return """
+    echo '\(username) ALL=(root) NOPASSWD: /usr/bin/pmset disablesleep 0, /usr/bin/pmset disablesleep 1' | sudo tee /etc/sudoers.d/banshee >/dev/null
+    sudo chmod 440 /etc/sudoers.d/banshee
+    sudo visudo -cf /etc/sudoers.d/banshee   # must print "parsed OK"; if not, sudo rm it immediately
+    """
 }
