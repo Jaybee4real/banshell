@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using Windows.Devices.Sensors;
 
-namespace Banshee;
+namespace Banshell;
 
 public class AccelerometerMonitor
 {

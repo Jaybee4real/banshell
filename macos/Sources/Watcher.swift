@@ -15,7 +15,7 @@ final class Watcher {
     private var lastStateData: Data?
     private var timer: DispatchSourceTimer?
     private var tickCounter = 0
-    private let queue = DispatchQueue(label: "banshee.watch")
+    private let queue = DispatchQueue(label: "banshell.watch")
     var onChange: ((Bool, Bool) -> Void)?
 
     private(set) var uiArmed = false
@@ -30,7 +30,7 @@ final class Watcher {
     }
 
     func start() {
-        logLine("BANSHEE v\(bansheeVersion) watching — armed=\(state.armed) lidSensor=\(lidSensor.available)")
+        logLine("BANSHELL v\(banshellVersion) watching — armed=\(state.armed) lidSensor=\(lidSensor.available)")
         if config.inputTrigger {
             inputTap.onInput = { [weak self] in
                 self?.queue.async { self?.handleInputEvent() }
@@ -191,7 +191,7 @@ final class Watcher {
         if sleepAssertion == 0 {
             IOPMAssertionCreateWithName("PreventUserIdleSystemSleep" as CFString,
                                         IOPMAssertionLevel(kIOPMAssertionLevelOn),
-                                        "BANSHEE armed" as CFString, &sleepAssertion)
+                                        "BANSHELL armed" as CFString, &sleepAssertion)
         }
         logLine("ARMED — monitoring starts in \(config.exitDelaySeconds)s")
         notifyChange()

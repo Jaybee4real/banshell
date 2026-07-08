@@ -1,7 +1,7 @@
 using System.Media;
 using System.Runtime.InteropServices;
 
-namespace Banshee;
+namespace Banshell;
 
 [ComImport, Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")]
 internal class MMDeviceEnumeratorComObject { }

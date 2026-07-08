@@ -1,9 +1,9 @@
-namespace Banshee;
+namespace Banshell;
 
 public class Watcher : IDisposable
 {
-    public BansheeConfig Config { get; private set; }
-    private BansheeState state;
+    public BanshellConfig Config { get; private set; }
+    private BanshellState state;
     private readonly System.Windows.Forms.Timer tick;
     private readonly AccelerometerMonitor accelerometer = new();
     private readonly InputHooks hooks = new();
@@ -19,10 +19,10 @@ public class Watcher : IDisposable
     public bool AccelerometerAvailable => accelerometer.Available;
     public (double X, double Y, double Z)? AccelerometerReading => accelerometer.Read();
 
-    public Watcher(BansheeConfig config)
+    public Watcher(BanshellConfig config)
     {
         Config = config;
-        state = BansheeConfig.LoadState();
+        state = BanshellConfig.LoadState();
         hooks.InputDetected += OnInput;
         hooks.Start();
         tick = new System.Windows.Forms.Timer { Interval = 100 };
@@ -39,7 +39,7 @@ public class Watcher : IDisposable
         }
     }
 
-    public void ReloadConfig(BansheeConfig newConfig) => Config = newConfig;
+    public void ReloadConfig(BanshellConfig newConfig) => Config = newConfig;
 
     public void Arm()
     {
@@ -50,7 +50,7 @@ public class Watcher : IDisposable
         accelBaseline = null;
         powerBaselineOnline = null;
         monitoringStartsAt = DateTime.Now.AddSeconds(Config.ExitDelaySeconds);
-        BansheeConfig.SaveState(state);
+        BanshellConfig.SaveState(state);
         KeepAwake.Enable();
         StateChanged?.Invoke();
     }
@@ -63,7 +63,7 @@ public class Watcher : IDisposable
         accelBaseline = null;
         powerBaselineOnline = null;
         monitoringStartsAt = null;
-        BansheeConfig.SaveState(state);
+        BanshellConfig.SaveState(state);
         KeepAwake.Disable();
         StateChanged?.Invoke();
     }
@@ -79,7 +79,7 @@ public class Watcher : IDisposable
         if (state.Triggered) return;
         state.Triggered = true;
         state.Reason = reason;
-        BansheeConfig.SaveState(state);
+        BanshellConfig.SaveState(state);
         StateChanged?.Invoke();
         AlarmRequested?.Invoke(reason);
     }

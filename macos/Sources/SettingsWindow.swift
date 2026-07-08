@@ -60,7 +60,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate {
         let panel = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 460, height: 620),
                              styleMask: [.titled, .closable, .miniaturizable],
                              backing: .buffered, defer: false)
-        panel.title = "BANSHEE Settings"
+        panel.title = "BANSHELL Settings"
         panel.isReleasedWhenClosed = false
         panel.delegate = self
 
@@ -353,7 +353,7 @@ final class FirstRunWindowController: NSObject {
     private func buildWindow() {
         let panel = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 420, height: 300),
                              styleMask: [.titled], backing: .buffered, defer: false)
-        panel.title = "Welcome to BANSHEE"
+        panel.title = "Welcome to BANSHELL"
         panel.isReleasedWhenClosed = false
 
         let stack = NSStackView()

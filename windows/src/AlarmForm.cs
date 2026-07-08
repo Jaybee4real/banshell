@@ -1,8 +1,8 @@
-namespace Banshee;
+namespace Banshell;
 
 public class AlarmForm : Form
 {
-    private readonly BansheeConfig config;
+    private readonly BanshellConfig config;
     private readonly Label reasonLabel;
     private readonly Label countdownLabel;
     private readonly TextBox pinBox;
@@ -15,7 +15,7 @@ public class AlarmForm : Form
 
     public event Action? Disarmed;
 
-    public AlarmForm(BansheeConfig config, string reason)
+    public AlarmForm(BanshellConfig config, string reason)
     {
         this.config = config;
         FormBorderStyle = FormBorderStyle.None;
@@ -27,7 +27,7 @@ public class AlarmForm : Form
 
         var title = new Label
         {
-            Text = "🚨  BANSHEE  🚨",
+            Text = "🚨  BANSHELL  🚨",
             Font = new Font("Segoe UI", 42, FontStyle.Bold),
             ForeColor = Color.Red,
             AutoSize = false,

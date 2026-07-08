@@ -73,7 +73,7 @@ final class AlarmController: NSObject {
         let content = NSView(frame: NSRect(origin: .zero, size: size))
         let centerX = size.width / 2
 
-        let title = NSTextField(labelWithString: "🚨  BANSHEE  🚨")
+        let title = NSTextField(labelWithString: "🚨  BANSHELL  🚨")
         title.font = NSFont.systemFont(ofSize: 64, weight: .black)
         title.textColor = NSColor.systemRed
         title.alignment = .center

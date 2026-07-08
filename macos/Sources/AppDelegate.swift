@@ -15,7 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         buildStatusItem()
         DistributedNotificationCenter.default().addObserver(
             self, selector: #selector(showSettingsRequested),
-            name: Notification.Name("com.jaybee.banshee.showSettings"), object: nil)
+            name: Notification.Name("com.jaybee.banshell.showSettings"), object: nil)
         let config = loadConfig() ?? Config.defaults
         if !config.hasPin {
             saveConfig(config)
@@ -35,7 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         item.button?.image = menuIcon(name: "shield")
         let menu = NSMenu()
 
-        let statusLine = NSMenuItem(title: "BANSHEE — starting…", action: nil, keyEquivalent: "")
+        let statusLine = NSMenuItem(title: "BANSHELL — starting…", action: nil, keyEquivalent: "")
         statusLine.isEnabled = false
         menu.addItem(statusLine)
         statusMenuItem = statusLine
@@ -74,7 +74,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(.separator())
 
-        let quitItem = NSMenuItem(title: "Quit BANSHEE", action: #selector(quitTapped), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: "Quit BANSHELL", action: #selector(quitTapped), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
 
@@ -83,7 +83,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func menuIcon(name: String) -> NSImage? {
-        let image = NSImage(systemSymbolName: name, accessibilityDescription: "BANSHEE")
+        let image = NSImage(systemSymbolName: name, accessibilityDescription: "BANSHELL")
         image?.isTemplate = true
         return image
     }
@@ -91,16 +91,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func refreshMenu(armed: Bool, triggered: Bool) {
         if triggered {
             statusItem?.button?.image = menuIcon(name: "bell.and.waves.left.and.right.fill")
-            statusMenuItem?.title = "BANSHEE — ALARM ACTIVE"
+            statusMenuItem?.title = "BANSHELL — ALARM ACTIVE"
         } else if armed {
             statusItem?.button?.image = menuIcon(name: "shield.fill")
-            statusMenuItem?.title = "BANSHEE — Armed"
+            statusMenuItem?.title = "BANSHELL — Armed"
         } else {
             statusItem?.button?.image = menuIcon(name: "shield")
             let config = loadConfig() ?? Config.defaults
             statusMenuItem?.title = config.autoArmDaily
-                ? String(format: "BANSHEE — Disarmed · arms at %02d:%02d", config.armHour, config.armMinute)
-                : "BANSHEE — Disarmed"
+                ? String(format: "BANSHELL — Disarmed · arms at %02d:%02d", config.armHour, config.armMinute)
+                : "BANSHELL — Disarmed"
         }
         armMenuItem?.isHidden = armed
         disarmMenuItem?.isHidden = !armed
@@ -169,7 +169,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func quitTapped() {
         if watcher?.uiArmed == true {
             guard let config = loadConfig(),
-                  let pin = promptForPin(message: "BANSHEE is armed. Enter your disarm code to quit."),
+                  let pin = promptForPin(message: "BANSHELL is armed. Enter your disarm code to quit."),
                   verifyPin(pin, config: config) else { return }
         }
         runProcess("/usr/bin/sudo", ["-n", "/usr/bin/pmset", "disablesleep", "0"])

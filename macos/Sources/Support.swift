@@ -1,8 +1,8 @@
 import CryptoKit
 import Foundation
 
-let bansheeVersion = "1.0.0"
-let launchdLabel = "com.jaybee.banshee"
+let banshellVersion = "1.1.0"
+let launchdLabel = "com.jaybee.banshell"
 
 struct Config: Codable {
     var pinSaltHex: String
@@ -35,12 +35,12 @@ struct AlarmState: Codable {
 
 enum Paths {
     static let supportDir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        .appendingPathComponent("Banshee")
+        .appendingPathComponent("Banshell")
     static let configFile = supportDir.appendingPathComponent("config.json")
     static let stateFile = supportDir.appendingPathComponent("state.json")
     static let lockFile = supportDir.appendingPathComponent(".lock")
     static let logFile = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent("Library/Logs/banshee.log")
+        .appendingPathComponent("Library/Logs/banshell.log")
     static let agentPlist = FileManager.default.homeDirectoryForCurrentUser
         .appendingPathComponent("Library/LaunchAgents/\(launchdLabel).plist")
 }
@@ -162,9 +162,9 @@ var sudoersRule: String {
 
 var sudoersCommand: String {
     """
-    echo '\(sudoersRule.trimmingCharacters(in: .newlines))' | sudo tee /etc/sudoers.d/banshee >/dev/null
-    sudo chmod 440 /etc/sudoers.d/banshee
-    sudo visudo -cf /etc/sudoers.d/banshee   # must print "parsed OK"; if not, sudo rm it immediately
+    echo '\(sudoersRule.trimmingCharacters(in: .newlines))' | sudo tee /etc/sudoers.d/banshell >/dev/null
+    sudo chmod 440 /etc/sudoers.d/banshell
+    sudo visudo -cf /etc/sudoers.d/banshell   # must print "parsed OK"; if not, sudo rm it immediately
     """
 }
 
@@ -181,14 +181,14 @@ enum SudoersInstallResult {
 
 func installSudoersRuleWithPrompt() -> SudoersInstallResult {
     let tempURL = FileManager.default.temporaryDirectory
-        .appendingPathComponent("banshee-sudoers-\(getpid())")
+        .appendingPathComponent("banshell-sudoers-\(getpid())")
     do {
         try sudoersRule.write(to: tempURL, atomically: true, encoding: .utf8)
     } catch {
         return .failed("could not write temp file: \(error.localizedDescription)")
     }
     defer { try? FileManager.default.removeItem(at: tempURL) }
-    let shell = "/usr/sbin/visudo -cf '\(tempURL.path)' && /usr/bin/install -o root -g wheel -m 440 '\(tempURL.path)' /etc/sudoers.d/banshee"
+    let shell = "/usr/sbin/visudo -cf '\(tempURL.path)' && /usr/bin/install -o root -g wheel -m 440 '\(tempURL.path)' /etc/sudoers.d/banshell"
     let source = "do shell script \"\(appleScriptEscaped(shell))\" with administrator privileges"
     var errorInfo: NSDictionary?
     guard let script = NSAppleScript(source: source) else { return .failed("could not build script") }

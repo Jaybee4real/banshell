@@ -11,9 +11,12 @@ if arguments.count > 1, cliCommands.contains(arguments[1]) {
     try? FileManager.default.createDirectory(at: Paths.supportDir, withIntermediateDirectories: true)
     let lockDescriptor = open(Paths.lockFile.path, O_CREAT | O_RDWR, 0o600)
     if lockDescriptor < 0 || flock(lockDescriptor, LOCK_EX | LOCK_NB) != 0 {
-        DistributedNotificationCenter.default().postNotificationName(
-            Notification.Name("com.jaybee.banshee.showSettings"), object: nil,
-            userInfo: nil, deliverImmediately: true)
+        let launchedByLaunchd = ProcessInfo.processInfo.environment["XPC_SERVICE_NAME"] == launchdLabel
+        if !launchedByLaunchd {
+            DistributedNotificationCenter.default().postNotificationName(
+                Notification.Name("com.jaybee.banshell.showSettings"), object: nil,
+                userInfo: nil, deliverImmediately: true)
+        }
         exit(0)
     }
     let app = NSApplication.shared

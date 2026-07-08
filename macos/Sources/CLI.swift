@@ -20,7 +20,10 @@ func commandInstall() {
             <string>\(binaryPath())</string>
         </array>
         <key>RunAtLoad</key><true/>
-        <key>KeepAlive</key><true/>
+        <key>KeepAlive</key>
+        <dict>
+            <key>SuccessfulExit</key><false/>
+        </dict>
         <key>StandardOutPath</key><string>\(Paths.logFile.path)</string>
         <key>StandardErrorPath</key><string>\(Paths.logFile.path)</string>
     </dict>
@@ -31,7 +34,7 @@ func commandInstall() {
     let uid = getuid()
     runProcess("/bin/launchctl", ["bootout", "gui/\(uid)", Paths.agentPlist.path])
     let status = runProcess("/bin/launchctl", ["bootstrap", "gui/\(uid)", Paths.agentPlist.path])
-    print(status == 0 ? "BANSHEE installed — menu bar icon is up, respawns if killed, starts at login."
+    print(status == 0 ? "BANSHELL installed — menu bar icon is up, respawns if killed, starts at login."
                       : "Wrote \(Paths.agentPlist.path) but launchctl bootstrap failed (\(status)).")
     print("""
 
@@ -39,7 +42,7 @@ func commandInstall() {
 
     \(sudoersCommand)
 
-    For the touch trigger: System Settings → Privacy & Security → Input Monitoring → add Banshee.
+    For the touch trigger: System Settings → Privacy & Security → Input Monitoring → add Banshell.
     """)
 }
 
@@ -53,7 +56,7 @@ func commandUninstall() {
 
 func commandStatus() {
     guard let config = loadConfig(), config.hasPin else {
-        print("Not configured — launch Banshee.app and set a disarm code.")
+        print("Not configured — launch Banshell.app and set a disarm code.")
         return
     }
     let state = loadState()
@@ -61,9 +64,9 @@ func commandStatus() {
     let agentLoaded = runProcess("/bin/launchctl", ["print", "gui/\(uid)/\(launchdLabel)"]) == 0
     let sensor = LidSensor()
     print("""
-    BANSHEE v\(bansheeVersion)
+    BANSHELL v\(banshellVersion)
       state:        \(state.triggered ? "TRIGGERED" : state.armed ? "ARMED" : "disarmed")
-      watcher:      \(agentLoaded ? "running (launchd)" : "NOT RUNNING — run `banshee install`")
+      watcher:      \(agentLoaded ? "running (launchd)" : "NOT RUNNING — run `banshell install`")
       auto-arm:     \(config.autoArmDaily ? String(format: "daily at %02d:%02d", config.armHour, config.armMinute) : "off")
       lid sensor:   \(sensor.available ? "ok (\(sensor.readAngle().map { "\(Int($0))°" } ?? "?"))" : "unavailable")
       power:        \(onACPower() ? "AC" : "battery")
@@ -87,7 +90,7 @@ func commandSensors() {
 func runCLI(_ command: String) {
     switch command {
     case "setpin":
-        guard var config = loadConfig() else { print("Launch Banshee.app first."); exit(1) }
+        guard var config = loadConfig() else { print("Launch Banshell.app first."); exit(1) }
         if config.hasPin, !requirePinInTerminal(config) { exit(1) }
         let pin = readSecret("New disarm code: ")
         guard pin.count >= 4, pin == readSecret("Confirm code: ") else { print("Aborted."); exit(1) }
@@ -96,14 +99,14 @@ func runCLI(_ command: String) {
         saveConfig(config)
         print("Code updated.")
     case "arm":
-        guard loadConfig()?.hasPin == true else { print("Launch Banshee.app and set a code first."); exit(1) }
+        guard loadConfig()?.hasPin == true else { print("Launch Banshell.app and set a code first."); exit(1) }
         var state = loadState()
         state.armed = true
         state.triggered = false
         saveState(state)
         print("Arming — watcher picks it up within a second (walk-away delay applies).")
     case "disarm":
-        guard let config = loadConfig() else { print("Launch Banshee.app first."); exit(1) }
+        guard let config = loadConfig() else { print("Launch Banshell.app first."); exit(1) }
         guard requirePinInTerminal(config) else { exit(1) }
         var state = loadState()
         if state.triggered {
@@ -114,7 +117,7 @@ func runCLI(_ command: String) {
         saveState(state)
         print("Disarmed.")
     case "drill":
-        guard loadConfig()?.hasPin == true else { print("Launch Banshee.app and set a code first."); exit(1) }
+        guard loadConfig()?.hasPin == true else { print("Launch Banshell.app and set a code first."); exit(1) }
         print("Firing a live drill in 3 seconds — the siren WILL sound until you enter your code.")
         sleep(3)
         var state = loadState()
@@ -124,7 +127,7 @@ func runCLI(_ command: String) {
         saveState(state)
     case "watch":
         guard let config = loadConfig(), config.hasPin else {
-            logLine("no config — launch Banshee.app and set a disarm code first")
+            logLine("no config — launch Banshell.app and set a disarm code first")
             exit(1)
         }
         let watcher = Watcher(config: config)
@@ -141,10 +144,10 @@ func runCLI(_ command: String) {
     case "sensors":
         commandSensors()
     case "version":
-        print("BANSHEE v\(bansheeVersion)")
+        print("BANSHELL v\(banshellVersion)")
     default:
         print("""
-        BANSHEE v\(bansheeVersion) — Breach-Activated Noise System for Halting Equipment Exfiltration
+        BANSHELL v\(banshellVersion) — Breach-Activated Noise Siren Halting Equipment Loss on Laptops
 
         Launch with no arguments for the menu bar app, or:
 

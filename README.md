@@ -1,10 +1,10 @@
-# BANSHEE
+# BANSHELL
 
-**Breach-Activated Noise System for Halting Equipment Exfiltration.**
+**Breach-Activated Noise Siren Halting Equipment Loss on Laptops.**
 
-An anti-theft alarm for laptops. It arms itself every night at a time you pick. If someone moves your machine, unplugs it, or touches the keyboard while it's armed, the screen locks behind a code prompt, the volume gets forced to maximum, and a siren screams until the right code is entered. Named after the Irish spirit whose wail can't be silenced.
+An anti-theft alarm for laptops. It arms itself every night at a time you pick. If someone moves your machine, unplugs it, or touches the keyboard while it's armed, the screen locks behind a code prompt, the volume gets forced to maximum, and a siren screams until the right code is entered. The name is the banshee, the Irish spirit whose wail can't be silenced, crossed with the clamshell your laptop actually is. The wail lives in the shell.
 
-I built this because I wanted my MacBook to scream if anyone grabbed it at night. Turns out that's harder than it sounds, and the obvious approach doesn't work: modern Macs don't have an accelerometer. Apple removed the Sudden Motion Sensor years ago when SSDs made it pointless. What M-series MacBooks do have is a lid-angle sensor buried in the hinge, and it's sensitive enough to register a one-degree wobble when someone picks the machine up. So that's what BANSHEE watches.
+I built this because I wanted my MacBook to scream if anyone grabbed it at night. Turns out that's harder than it sounds, and the obvious approach doesn't work: modern Macs don't have an accelerometer. Apple removed the Sudden Motion Sensor years ago when SSDs made it pointless. What M-series MacBooks do have is a lid-angle sensor buried in the hinge, and it's sensitive enough to register a one-degree wobble when someone picks the machine up. So that's what BANSHELL watches.
 
 ## How it detects a grab
 
@@ -35,34 +35,34 @@ On macOS, killing the process doesn't help either: launchd restarts it in under 
 
 ### macOS (Apple Silicon or Intel, macOS 13+)
 
-Download `Banshee-macOS.zip` from the [latest release](../../releases/latest), unzip, and drag `Banshee.app` to Applications. The app is self-signed, so the first launch needs a right-click → Open, or:
+Download `Banshell-macOS.zip` from the [latest release](../../releases/latest), unzip, and drag `Banshell.app` to Applications. The app is self-signed, so the first launch needs a right-click → Open, or:
 
 ```
-xattr -dr com.apple.quarantine /Applications/Banshee.app
+xattr -dr com.apple.quarantine /Applications/Banshell.app
 ```
 
 Launch it, set your disarm code, and it lives in the menu bar. Then two one-time grants, both shown in Settings with a button each:
 
-1. **Closed-lid protection.** BANSHEE keeps the Mac awake while armed so the speakers stay live with the lid shut. That needs one `pmset` sudoers entry. Click "Enable Closed-Lid Protection" in Settings and enter your admin password in the macOS prompt; the rule is checked with `visudo -cf` before it's installed. Prefer to see exactly what runs? The "copy the command instead" button gives you the same thing for Terminal.
-2. **Touch trigger.** Add Banshee under System Settings → Privacy & Security → Input Monitoring.
+1. **Closed-lid protection.** BANSHELL keeps the Mac awake while armed so the speakers stay live with the lid shut. That needs one `pmset` sudoers entry. Click "Enable Closed-Lid Protection" in Settings and enter your admin password in the macOS prompt; the rule is checked with `visudo -cf` before it's installed. Prefer to see exactly what runs? The "copy the command instead" button gives you the same thing for Terminal.
+2. **Touch trigger.** Add Banshell under System Settings → Privacy & Security → Input Monitoring.
 
 To make it start at login and respawn if killed:
 
 ```
-/Applications/Banshee.app/Contents/MacOS/banshee install
+/Applications/Banshell.app/Contents/MacOS/banshell install
 ```
 
-There's a full CLI too (`banshee status`, `arm`, `disarm`, `drill`, `sensors`) if you'd rather script it.
+There's a full CLI too (`banshell status`, `arm`, `disarm`, `drill`, `sensors`) if you'd rather script it.
 
 ### Windows (10/11, 64-bit)
 
-Download `Banshee-Windows.zip` from the [latest release](../../releases/latest), unzip anywhere, run `Banshee.exe`. It's self-contained, so there is no runtime to install. SmartScreen will warn about an unsigned app the first time; choose "Run anyway."
+Download `Banshell-Windows.zip` from the [latest release](../../releases/latest), unzip anywhere, run `Banshell.exe`. It's self-contained, so there is no runtime to install. SmartScreen will warn about an unsigned app the first time; choose "Run anyway."
 
-Set your code, then in Settings tick "Start BANSHEE when Windows starts." One thing Windows won't let an app do quietly: keep running with the lid closed. If you want that, set the lid action to "Do nothing" in Power Options.
+Set your code, then in Settings tick "Start BANSHELL when Windows starts." One thing Windows won't let an app do quietly: keep running with the lid closed. If you want that, set the lid action to "Do nothing" in Power Options.
 
 ## Test it before you need it
 
-Fire a drill from the menu (Test Siren) or with `banshee drill`. The real siren sounds until you enter your code. Do this once so you know the disarm flow cold, because the first real trigger is a bad time to learn it.
+Fire a drill from the menu (Test Siren) or with `banshell drill`. The real siren sounds until you enter your code. Do this once so you know the disarm flow cold, because the first real trigger is a bad time to learn it.
 
 ## Settings
 
@@ -72,7 +72,7 @@ Everything lives in the Settings window: arm time, which triggers are active, mo
 
 I'd rather you know the limits up front than find out from a thief.
 
-- **A 10-second power-button hold kills any software alarm.** No app survives a hard power-off. Pair BANSHEE with FileVault + Find My (Mac) or BitLocker + Find My Device (Windows) so a powered-off stolen laptop is still a brick.
+- **A 10-second power-button hold kills any software alarm.** No app survives a hard power-off. Pair BANSHELL with FileVault + Find My (Mac) or BitLocker + Find My Device (Windows) so a powered-off stolen laptop is still a brick.
 - On Windows there's no launchd equivalent baked in, so someone who already has your session unlocked could end the process from Task Manager. In practice the machine is locked while armed, so this matters less than it sounds.
 - If the alarm fires while the screen is locked, the thief sees the login wall with the siren blaring. You log in first, then enter the disarm code.
 - The siren tops out at what laptop speakers can do. It's roughly 80dB up close: very loud in a quiet room, less dramatic in a busy cafe.
@@ -80,9 +80,9 @@ I'd rather you know the limits up front than find out from a thief.
 
 ## Building from source
 
-macOS: `cd macos && ./build.sh` (needs Xcode command line tools). Produces a universal `Banshee.app` in `macos/build/`.
+macOS: `cd macos && ./build.sh` (needs Xcode command line tools). Produces a universal `Banshell.app` in `macos/build/`.
 
-Windows: `dotnet publish windows/Banshee.csproj -c Release -r win-x64 --self-contained` (needs the .NET 8 SDK).
+Windows: `dotnet publish windows/Banshell.csproj -c Release -r win-x64 --self-contained` (needs the .NET 8 SDK).
 
 Releases are built by the GitHub Actions workflow in `.github/workflows/release.yml` whenever a `v*` tag is pushed.
 

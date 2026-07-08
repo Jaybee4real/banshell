@@ -19,7 +19,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: macos/build/Banshee-macOS.zip
+          files: macos/build/Banshell-macOS.zip
 
   windows:
     runs-on: windows-latest
@@ -29,11 +29,11 @@ jobs:
         with:
           dotnet-version: "8.0.x"
       - name: Publish self-contained build
-        run: dotnet publish windows/Banshee.csproj -c Release -r win-x64 --self-contained -o windows/publish
+        run: dotnet publish windows/Banshell.csproj -c Release -r win-x64 --self-contained -o windows/publish
       - name: Zip
-        run: Compress-Archive -Path windows/publish/* -DestinationPath Banshee-Windows.zip
+        run: Compress-Archive -Path windows/publish/* -DestinationPath Banshell-Windows.zip
       - name: Upload to release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: Banshee-Windows.zip
+          files: Banshell-Windows.zip

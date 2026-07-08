@@ -5,11 +5,11 @@
     <UseWindowsForms>true</UseWindowsForms>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <RootNamespace>Banshee</RootNamespace>
-    <AssemblyName>Banshee</AssemblyName>
+    <RootNamespace>Banshell</RootNamespace>
+    <AssemblyName>Banshell</AssemblyName>
     <EnableWindowsTargeting>true</EnableWindowsTargeting>
     <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
     <ApplicationHighDpiMode>SystemAware</ApplicationHighDpiMode>
-    <Version>1.0.0</Version>
+    <Version>1.1.0</Version>
   </PropertyGroup>
 </Project>

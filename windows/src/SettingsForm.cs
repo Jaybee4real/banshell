@@ -1,11 +1,11 @@
 using Microsoft.Win32;
 
-namespace Banshee;
+namespace Banshell;
 
 public class SettingsForm : Form
 {
     private readonly Watcher watcher;
-    private BansheeConfig config;
+    private BanshellConfig config;
     private readonly CheckBox autoArmBox;
     private readonly DateTimePicker timePicker;
     private readonly CheckBox motionBox;
@@ -25,8 +25,8 @@ public class SettingsForm : Form
     public SettingsForm(Watcher watcher)
     {
         this.watcher = watcher;
-        config = BansheeConfig.Load();
-        Text = "BANSHEE Settings";
+        config = BanshellConfig.Load();
+        Text = "BANSHELL Settings";
         FormBorderStyle = FormBorderStyle.FixedSingle;
         MaximizeBox = false;
         ClientSize = new Size(480, 560);
@@ -100,7 +100,7 @@ public class SettingsForm : Form
         layout.Controls.Add(pinButton);
 
         layout.Controls.Add(Section("STARTUP"));
-        autostartBox = new CheckBox { Text = "Start BANSHEE when Windows starts", AutoSize = true };
+        autostartBox = new CheckBox { Text = "Start BANSHELL when Windows starts", AutoSize = true };
         autostartBox.CheckedChanged += (_, _) => ApplyAutostart();
         layout.Controls.Add(autostartBox);
 
@@ -156,7 +156,7 @@ public class SettingsForm : Form
         exitDelay.Value = Math.Clamp(config.ExitDelaySeconds, (int)exitDelay.Minimum, (int)exitDelay.Maximum);
         entryDelay.Value = Math.Clamp(config.EntryDelaySeconds, (int)entryDelay.Minimum, (int)entryDelay.Maximum);
         using var runKey = Registry.CurrentUser.OpenSubKey(RunKeyPath);
-        autostartBox.Checked = runKey?.GetValue("Banshee") != null;
+        autostartBox.Checked = runKey?.GetValue("Banshell") != null;
         UpdateLive();
     }
 
@@ -180,9 +180,9 @@ public class SettingsForm : Form
     {
         using var runKey = Registry.CurrentUser.CreateSubKey(RunKeyPath);
         if (autostartBox.Checked)
-            runKey.SetValue("Banshee", $"\"{Application.ExecutablePath}\"");
+            runKey.SetValue("Banshell", $"\"{Application.ExecutablePath}\"");
         else
-            runKey.DeleteValue("Banshee", false);
+            runKey.DeleteValue("Banshell", false);
     }
 
     private void UpdateLive()
@@ -204,17 +204,17 @@ public class SettingsForm : Form
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
         if (config.HasPin && !config.VerifyPin(dialog.CurrentPin))
         {
-            MessageBox.Show(this, "Current code is wrong.", "BANSHEE", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this, "Current code is wrong.", "BANSHELL", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return;
         }
         if (dialog.NewPin.Length < 4)
         {
-            MessageBox.Show(this, "New code must be at least 4 characters.", "BANSHEE", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this, "New code must be at least 4 characters.", "BANSHELL", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return;
         }
         if (dialog.NewPin != dialog.ConfirmPin)
         {
-            MessageBox.Show(this, "Codes do not match.", "BANSHEE", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            MessageBox.Show(this, "Codes do not match.", "BANSHELL", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return;
         }
         config.SetPin(dialog.NewPin);

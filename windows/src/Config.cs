@@ -2,9 +2,9 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 
-namespace Banshee;
+namespace Banshell;
 
-public class BansheeConfig
+public class BanshellConfig
 {
     public string PinSaltHex { get; set; } = "";
     public string PinHashHex { get; set; } = "";
@@ -21,20 +21,20 @@ public class BansheeConfig
     public bool HasPin => PinHashHex.Length > 0;
 
     public static string SupportDir =>
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Banshee");
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Banshell");
 
     private static string ConfigPath => Path.Combine(SupportDir, "config.json");
     private static string StatePath => Path.Combine(SupportDir, "state.json");
 
-    public static BansheeConfig Load()
+    public static BanshellConfig Load()
     {
         try
         {
             if (File.Exists(ConfigPath))
-                return JsonSerializer.Deserialize<BansheeConfig>(File.ReadAllText(ConfigPath)) ?? new BansheeConfig();
+                return JsonSerializer.Deserialize<BanshellConfig>(File.ReadAllText(ConfigPath)) ?? new BanshellConfig();
         }
         catch { }
-        return new BansheeConfig();
+        return new BanshellConfig();
     }
 
     public void Save()
@@ -58,25 +58,25 @@ public class BansheeConfig
         PinHashHex = HashPin(pin, PinSaltHex);
     }
 
-    public static BansheeState LoadState()
+    public static BanshellState LoadState()
     {
         try
         {
             if (File.Exists(StatePath))
-                return JsonSerializer.Deserialize<BansheeState>(File.ReadAllText(StatePath)) ?? new BansheeState();
+                return JsonSerializer.Deserialize<BanshellState>(File.ReadAllText(StatePath)) ?? new BanshellState();
         }
         catch { }
-        return new BansheeState();
+        return new BanshellState();
     }
 
-    public static void SaveState(BansheeState state)
+    public static void SaveState(BanshellState state)
     {
         Directory.CreateDirectory(SupportDir);
         File.WriteAllText(StatePath, JsonSerializer.Serialize(state));
     }
 }
 
-public class BansheeState
+public class BanshellState
 {
     public bool Armed { get; set; }
     public bool Triggered { get; set; }
