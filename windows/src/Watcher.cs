@@ -122,13 +122,21 @@ public class Watcher : IDisposable
 
     private void CheckAutoArm()
     {
-        if (!Config.AutoArmDaily || state.Armed || state.Triggered) return;
+        if (!Config.AutoArmDaily && !Config.AutoDisarmDaily) return;
         var now = DateTime.Now;
+        if (!Config.ScheduleDays.Contains((int)now.DayOfWeek)) return;
         var today = now.ToString("yyyy-MM-dd");
-        if (now.Hour == Config.ArmHour && now.Minute == Config.ArmMinute && state.LastAutoArmDay != today)
+        if (Config.AutoArmDaily && !state.Armed && !state.Triggered
+            && now.Hour == Config.ArmHour && now.Minute == Config.ArmMinute && state.LastAutoArmDay != today)
         {
             state.LastAutoArmDay = today;
             Arm();
+        }
+        if (Config.AutoDisarmDaily && state.Armed && !state.Triggered
+            && now.Hour == Config.DisarmHour && now.Minute == Config.DisarmMinute && state.LastAutoDisarmDay != today)
+        {
+            state.LastAutoDisarmDay = today;
+            Disarm();
         }
     }
 

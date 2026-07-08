@@ -5,8 +5,8 @@
     <key>CFBundleName</key><string>Banshell</string>
     <key>CFBundleDisplayName</key><string>Banshell</string>
     <key>CFBundleIdentifier</key><string>com.jaybee.banshell</string>
-    <key>CFBundleVersion</key><string>1.6.0</string>
-    <key>CFBundleShortVersionString</key><string>1.6.0</string>
+    <key>CFBundleVersion</key><string>1.7.0</string>
+    <key>CFBundleShortVersionString</key><string>1.7.0</string>
     <key>CFBundleExecutable</key><string>banshell</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleIconFile</key><string>Banshell</string>

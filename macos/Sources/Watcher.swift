@@ -173,16 +173,25 @@ final class Watcher {
     }
 
     private func checkAutoArm() {
-        guard config.autoArmDaily, !state.armed, !state.triggered else { return }
+        guard config.autoArmDaily || config.autoDisarmOn else { return }
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         let today = formatter.string(from: Date())
-        let components = Calendar.current.dateComponents([.hour, .minute], from: Date())
-        if components.hour == config.armHour, components.minute == config.armMinute,
+        let components = Calendar.current.dateComponents([.hour, .minute, .weekday], from: Date())
+        guard let weekday = components.weekday, config.scheduledDays.contains(weekday) else { return }
+        if config.autoArmDaily, !state.armed, !state.triggered,
+           components.hour == config.armHour, components.minute == config.armMinute,
            state.lastAutoArmDay != today {
             state.lastAutoArmDay = today
             applyArm()
             logLine("auto-armed on schedule (\(config.armHour):\(String(format: "%02d", config.armMinute)))")
+        }
+        if config.autoDisarmOn, state.armed, !state.triggered,
+           components.hour == config.disarmH, components.minute == config.disarmM,
+           state.lastAutoDisarmDay != today {
+            state.lastAutoDisarmDay = today
+            applyDisarm()
+            logLine("auto-disarmed on schedule (\(config.disarmH):\(String(format: "%02d", config.disarmM)))")
         }
     }
 

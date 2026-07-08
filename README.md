@@ -67,7 +67,9 @@ Fire a drill from the menu (Test Siren) or with `banshell drill`. The real siren
 
 ## Settings
 
-Everything lives in the Settings window: arm time, which triggers are active, motion sensitivity with a live sensor readout, the walk-away delay (so arming doesn't trap you at your own desk), the siren delay, the disarm code, and the owner card shown on the alarm screen. Changes save immediately.
+Everything lives in the Settings window: the schedule, which triggers are active, motion sensitivity with a live sensor readout, the walk-away delay (so arming doesn't trap you at your own desk), the siren delay, the disarm code, and the owner card shown on the alarm screen. Changes save immediately.
+
+The schedule is a nightly window: pick an arm time, optionally an auto-disarm time, and the days of the week it runs. So you can have it arm at 23:00 and disarm itself at 07:00 on weekdays, and never think about it. Auto-disarm only fires when the machine is sitting armed and quiet — if the siren is already going, the schedule will not silence it, only your code will.
 
 ## Staying up to date
 

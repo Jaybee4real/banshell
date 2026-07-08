@@ -8,6 +8,9 @@ public class SettingsForm : Form
     private BanshellConfig config;
     private readonly CheckBox autoArmBox;
     private readonly DateTimePicker timePicker;
+    private readonly CheckBox autoDisarmBox;
+    private readonly DateTimePicker disarmTimePicker;
+    private readonly CheckBox[] dayButtons;
     private readonly CheckBox motionBox;
     private readonly TrackBar sensitivityBar;
     private readonly Label sensitivityLabel;
@@ -65,6 +68,40 @@ public class SettingsForm : Form
         scheduleRow.Controls.Add(autoArmBox);
         scheduleRow.Controls.Add(timePicker);
         layout.Controls.Add(scheduleRow);
+
+        var disarmRow = Row();
+        autoDisarmBox = new CheckBox { Text = "Disarm automatically at", AutoSize = true, Padding = new Padding(0, 4, 0, 0) };
+        autoDisarmBox.CheckedChanged += (_, _) => SaveFromControls();
+        disarmTimePicker = new DateTimePicker
+        {
+            Format = DateTimePickerFormat.Custom,
+            CustomFormat = "HH:mm",
+            ShowUpDown = true,
+            Width = 100,
+        };
+        disarmTimePicker.ValueChanged += (_, _) => SaveFromControls();
+        disarmRow.Controls.Add(autoDisarmBox);
+        disarmRow.Controls.Add(disarmTimePicker);
+        layout.Controls.Add(disarmRow);
+
+        var daysRow = Row();
+        daysRow.Controls.Add(new Label { Text = "Days:", AutoSize = true, Padding = new Padding(0, 6, 4, 0) });
+        var dayNames = new[] { "S", "M", "T", "W", "T", "F", "S" };
+        dayButtons = new CheckBox[7];
+        for (int index = 0; index < 7; index++)
+        {
+            dayButtons[index] = new CheckBox
+            {
+                Text = dayNames[index],
+                Appearance = Appearance.Button,
+                Width = 34,
+                Height = 26,
+                TextAlign = ContentAlignment.MiddleCenter,
+            };
+            dayButtons[index].CheckedChanged += (_, _) => SaveFromControls();
+            daysRow.Controls.Add(dayButtons[index]);
+        }
+        layout.Controls.Add(daysRow);
 
         layout.Controls.Add(Section("TRIGGERS"));
         motionBox = new CheckBox { Text = "Motion — accelerometer", AutoSize = true };
@@ -199,6 +236,10 @@ public class SettingsForm : Form
     {
         autoArmBox.Checked = config.AutoArmDaily;
         timePicker.Value = DateTime.Today.AddHours(config.ArmHour).AddMinutes(config.ArmMinute);
+        autoDisarmBox.Checked = config.AutoDisarmDaily;
+        disarmTimePicker.Value = DateTime.Today.AddHours(config.DisarmHour).AddMinutes(config.DisarmMinute);
+        for (int index = 0; index < 7; index++)
+            dayButtons[index].Checked = config.ScheduleDays.Contains(index);
         motionBox.Checked = config.MotionTrigger;
         powerBox.Checked = config.PowerTrigger;
         inputBox.Checked = config.InputTrigger;
@@ -224,6 +265,11 @@ public class SettingsForm : Form
         config.AutoArmDaily = autoArmBox.Checked;
         config.ArmHour = timePicker.Value.Hour;
         config.ArmMinute = timePicker.Value.Minute;
+        config.AutoDisarmDaily = autoDisarmBox.Checked;
+        config.DisarmHour = disarmTimePicker.Value.Hour;
+        config.DisarmMinute = disarmTimePicker.Value.Minute;
+        var selectedDays = Enumerable.Range(0, 7).Where(index => dayButtons[index].Checked).ToArray();
+        config.ScheduleDays = selectedDays.Length == 0 ? new[] { 0, 1, 2, 3, 4, 5, 6 } : selectedDays;
         config.MotionTrigger = motionBox.Checked;
         config.PowerTrigger = powerBox.Checked;
         config.InputTrigger = inputBox.Checked;

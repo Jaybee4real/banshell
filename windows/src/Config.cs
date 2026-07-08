@@ -24,6 +24,10 @@ public class BanshellConfig
     public bool MotionOnCharger { get; set; } = true;
     public bool MotionOnBattery { get; set; } = false;
     public int MotionBatteryFloor { get; set; } = 20;
+    public bool AutoDisarmDaily { get; set; } = false;
+    public int DisarmHour { get; set; } = 7;
+    public int DisarmMinute { get; set; } = 0;
+    public int[] ScheduleDays { get; set; } = { 0, 1, 2, 3, 4, 5, 6 };
 
     public bool HasPin => PinHashHex.Length > 0;
 
@@ -88,5 +92,6 @@ public class BanshellState
     public bool Armed { get; set; }
     public bool Triggered { get; set; }
     public string? LastAutoArmDay { get; set; }
+    public string? LastAutoDisarmDay { get; set; }
     public string? Reason { get; set; }
 }

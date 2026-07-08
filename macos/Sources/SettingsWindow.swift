@@ -6,6 +6,9 @@ final class SettingsWindowController: NSObject, NSWindowDelegate, NSTextFieldDel
     private var config: Config
     private var autoArmCheckbox: NSButton!
     private var timePicker: NSDatePicker!
+    private var autoDisarmCheckbox: NSButton!
+    private var disarmTimePicker: NSDatePicker!
+    private var dayButtons: [NSButton] = []
     private var lidCheckbox: NSButton!
     private var powerCheckbox: NSButton!
     private var touchCheckbox: NSButton!
@@ -97,6 +100,37 @@ final class SettingsWindowController: NSObject, NSWindowDelegate, NSTextFieldDel
         scheduleRow.addArrangedSubview(autoArmCheckbox)
         scheduleRow.addArrangedSubview(timePicker)
         stack.addArrangedSubview(scheduleRow)
+
+        let disarmRow = NSStackView()
+        disarmRow.orientation = .horizontal
+        disarmRow.spacing = 8
+        autoDisarmCheckbox = NSButton(checkboxWithTitle: "Disarm automatically at",
+                                      target: self, action: #selector(controlChanged))
+        disarmTimePicker = NSDatePicker()
+        disarmTimePicker.datePickerStyle = .textFieldAndStepper
+        disarmTimePicker.datePickerElements = .hourMinute
+        disarmTimePicker.target = self
+        disarmTimePicker.action = #selector(controlChanged)
+        disarmRow.addArrangedSubview(autoDisarmCheckbox)
+        disarmRow.addArrangedSubview(disarmTimePicker)
+        stack.addArrangedSubview(disarmRow)
+
+        let daysRow = NSStackView()
+        daysRow.orientation = .horizontal
+        daysRow.spacing = 4
+        daysRow.addArrangedSubview(NSTextField(labelWithString: "Days:"))
+        let dayNames = ["S", "M", "T", "W", "T", "F", "S"]
+        for index in 0..<7 {
+            let button = NSButton(title: dayNames[index], target: self, action: #selector(dayToggled(_:)))
+            button.setButtonType(.pushOnPushOff)
+            button.bezelStyle = .rounded
+            button.tag = index + 1
+            button.setContentHuggingPriority(.required, for: .horizontal)
+            button.widthAnchor.constraint(equalToConstant: 34).isActive = true
+            dayButtons.append(button)
+            daysRow.addArrangedSubview(button)
+        }
+        stack.addArrangedSubview(daysRow)
 
         stack.addArrangedSubview(spacer(8))
         stack.addArrangedSubview(sectionLabel("Triggers"))
@@ -273,7 +307,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate, NSTextFieldDel
             stack.bottomAnchor.constraint(lessThanOrEqualTo: content.bottomAnchor),
         ])
         panel.contentView = content
-        panel.setContentSize(NSSize(width: 470, height: 880))
+        panel.setContentSize(NSSize(width: 470, height: 960))
         window = panel
     }
 
@@ -295,6 +329,13 @@ final class SettingsWindowController: NSObject, NSWindowDelegate, NSTextFieldDel
         components.hour = config.armHour
         components.minute = config.armMinute
         timePicker.dateValue = Calendar.current.date(from: components) ?? Date()
+        autoDisarmCheckbox.state = config.autoDisarmOn ? .on : .off
+        var disarmComponents = DateComponents()
+        disarmComponents.hour = config.disarmH
+        disarmComponents.minute = config.disarmM
+        disarmTimePicker.dateValue = Calendar.current.date(from: disarmComponents) ?? Date()
+        let scheduled = config.scheduledDays
+        for button in dayButtons { button.state = scheduled.contains(button.tag) ? .on : .off }
         lidCheckbox.state = config.lidTrigger ? .on : .off
         powerCheckbox.state = config.powerTrigger ? .on : .off
         touchCheckbox.state = config.inputTrigger ? .on : .off
@@ -354,6 +395,12 @@ final class SettingsWindowController: NSObject, NSWindowDelegate, NSTextFieldDel
         let components = Calendar.current.dateComponents([.hour, .minute], from: timePicker.dateValue)
         config.armHour = components.hour ?? config.armHour
         config.armMinute = components.minute ?? config.armMinute
+        config.autoDisarmDaily = autoDisarmCheckbox.state == .on
+        let disarmComponents = Calendar.current.dateComponents([.hour, .minute], from: disarmTimePicker.dateValue)
+        config.disarmHour = disarmComponents.hour ?? config.disarmH
+        config.disarmMinute = disarmComponents.minute ?? config.disarmM
+        let selectedDays = dayButtons.filter { $0.state == .on }.map { $0.tag }.sorted()
+        config.scheduleDays = selectedDays.isEmpty ? [1, 2, 3, 4, 5, 6, 7] : selectedDays
         config.lidTrigger = lidCheckbox.state == .on
         config.powerTrigger = powerCheckbox.state == .on
         config.inputTrigger = touchCheckbox.state == .on
@@ -375,6 +422,10 @@ final class SettingsWindowController: NSObject, NSWindowDelegate, NSTextFieldDel
 
     @objc private func checkForUpdatesNow() {
         Updater.shared.checkForUpdates(silent: false)
+    }
+
+    @objc private func dayToggled(_ sender: NSButton) {
+        controlChanged()
     }
 
     private func updateLiveAngle() {
