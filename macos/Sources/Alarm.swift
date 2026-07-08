@@ -152,9 +152,16 @@ final class AlarmController: NSObject {
         guard active else { return }
         NSApp.activate(ignoringOtherApps: true)
         for window in windows { window.orderFrontRegardless() }
-        if let field = pinField, let window = windows.first(where: { $0.contentView?.subviews.contains(field) ?? false }) {
-            window.makeKeyAndOrderFront(nil)
+        guard let field = pinField,
+              let window = windows.first(where: { $0.contentView?.subviews.contains(field) ?? false }) else { return }
+        if !window.isKeyWindow { window.makeKeyAndOrderFront(nil) }
+        let editorDelegate = (window.firstResponder as? NSTextView)?.delegate as AnyObject?
+        let fieldHasFocus = window.firstResponder === field || editorDelegate === field
+        if !fieldHasFocus {
             window.makeFirstResponder(field)
+            if let editor = field.currentEditor() {
+                editor.selectedRange = NSRange(location: (editor.string as NSString).length, length: 0)
+            }
         }
     }
 

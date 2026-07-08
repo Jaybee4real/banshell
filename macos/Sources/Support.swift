@@ -1,7 +1,7 @@
 import CryptoKit
 import Foundation
 
-let banshellVersion = "1.1.1"
+let banshellVersion = "1.1.2"
 let launchdLabel = "com.jaybee.banshell"
 
 struct Config: Codable {

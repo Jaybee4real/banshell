@@ -108,8 +108,13 @@ public class AlarmForm : Form
         focusTimer.Tick += (_, _) =>
         {
             TopMost = true;
-            Activate();
-            pinBox.Focus();
+            if (Form.ActiveForm != this) Activate();
+            if (!pinBox.Focused)
+            {
+                pinBox.Focus();
+                pinBox.SelectionStart = pinBox.TextLength;
+                pinBox.SelectionLength = 0;
+            }
         };
         focusTimer.Start();
 
