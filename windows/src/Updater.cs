@@ -115,6 +115,7 @@ public static class Updater
     }
 
     private static string? downloadingVersion;
+    private static int downloadPercent;
     private static ReleaseInfo? readyRelease;
     private static (string Path, string Version)? readyInstaller;
 
@@ -123,7 +124,7 @@ public static class Updater
     public static string? StatusText =>
         readyInstaller is { } ready ? $"Install v{ready.Version} & Restart"
         : readyRelease is { } release ? $"Download & Install v{release.Version}"
-        : downloadingVersion is { } version ? $"Downloading v{version}…"
+        : downloadingVersion is { } version ? $"Downloading v{version}… {downloadPercent}%"
         : null;
 
     public static async void ActOnStatus()
@@ -143,6 +144,7 @@ public static class Updater
     {
         var target = Path.Combine(Path.GetTempPath(), $"Banshell-Setup-{info.Version}.exe");
         downloadingVersion = info.Version;
+        downloadPercent = 0;
         readyRelease = null;
         readyInstaller = null;
         StatusChanged?.Invoke();
@@ -150,9 +152,27 @@ public static class Updater
         {
             using var client = new HttpClient();
             client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("BANSHELL-Updater", "1.0"));
-            client.Timeout = TimeSpan.FromMinutes(5);
-            var bytes = await client.GetByteArrayAsync(info.AssetUrl);
-            await File.WriteAllBytesAsync(target, bytes);
+            client.Timeout = TimeSpan.FromMinutes(10);
+            using var response = await client.GetAsync(info.AssetUrl, HttpCompletionOption.ResponseHeadersRead);
+            response.EnsureSuccessStatusCode();
+            var total = response.Content.Headers.ContentLength ?? -1;
+            using var source = await response.Content.ReadAsStreamAsync();
+            using var file = File.Create(target);
+            var buffer = new byte[81920];
+            long readTotal = 0;
+            int lastPercent = -1;
+            int read;
+            while ((read = await source.ReadAsync(buffer)) > 0)
+            {
+                await file.WriteAsync(buffer.AsMemory(0, read));
+                readTotal += read;
+                if (total <= 0) continue;
+                int percent = (int)(readTotal * 100 / total);
+                if (percent == lastPercent) continue;
+                lastPercent = percent;
+                downloadPercent = percent;
+                StatusChanged?.Invoke();
+            }
         }
         catch
         {

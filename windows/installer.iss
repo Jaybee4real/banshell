@@ -1,6 +1,6 @@
 #define AppVersion GetEnv("BANSHELL_VERSION")
 #if AppVersion == ""
-  #define AppVersion "1.10.0"
+  #define AppVersion "1.11.0"
 #endif
 
 [Setup]

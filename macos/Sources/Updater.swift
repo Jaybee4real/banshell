@@ -33,18 +33,23 @@ func versionIsNewer(_ candidate: String, than current: String) -> Bool {
     return false
 }
 
-final class Updater {
+final class Updater: NSObject, URLSessionDownloadDelegate {
     static let shared = Updater()
     private var checking = false
     private var downloadingVersion: String?
+    private var downloadPercent = 0
+    private var pendingVersion = ""
+    private var pendingAutoInstall = false
     private var readyRelease: ReleaseInfo?
     private var readyInstaller: (url: URL, version: String)?
     var onStatusChange: (() -> Void)?
 
+    private lazy var downloadSession = URLSession(configuration: .default, delegate: self, delegateQueue: nil)
+
     var statusText: String? {
         if let readyInstaller { return "Install v\(readyInstaller.version) & Restart" }
         if let readyRelease { return "Download & Install v\(readyRelease.version)" }
-        if let downloadingVersion { return "Downloading v\(downloadingVersion)…" }
+        if let downloadingVersion { return "Downloading v\(downloadingVersion)… \(downloadPercent)%" }
         return nil
     }
 
@@ -154,42 +159,56 @@ final class Updater {
 
     private func downloadSilent(_ info: ReleaseInfo, autoInstall: Bool) {
         downloadingVersion = info.version
+        downloadPercent = 0
+        pendingVersion = info.version
+        pendingAutoInstall = autoInstall
         readyRelease = nil
         readyInstaller = nil
         notifyStatus()
-        DispatchQueue.global(qos: .userInitiated).async {
-            let destination = FileManager.default.temporaryDirectory
-                .appendingPathComponent("Banshell-\(info.version).pkg")
-            try? FileManager.default.removeItem(at: destination)
-            var downloadError: String?
-            let semaphore = DispatchSemaphore(value: 0)
-            URLSession.shared.downloadTask(with: info.assetURL) { tempURL, _, error in
-                defer { semaphore.signal() }
-                if let error { downloadError = error.localizedDescription; return }
-                guard let tempURL else { downloadError = "download produced no file"; return }
-                do {
-                    try FileManager.default.moveItem(at: tempURL, to: destination)
-                } catch {
-                    downloadError = error.localizedDescription
-                }
-            }.resume()
-            semaphore.wait()
+        downloadSession.downloadTask(with: info.assetURL).resume()
+    }
 
-            DispatchQueue.main.async {
-                self.downloadingVersion = nil
-                if let downloadError {
-                    logLine("update download failed: \(downloadError)")
-                    self.notifyStatus()
-                    return
-                }
-                if autoInstall {
-                    self.runInstaller(at: destination, version: info.version)
-                } else {
-                    self.readyInstaller = (destination, info.version)
-                    logLine("update v\(info.version) downloaded — install off, waiting for user")
-                    self.notifyStatus()
-                }
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask,
+                    didWriteData bytesWritten: Int64, totalBytesWritten: Int64,
+                    totalBytesExpectedToWrite: Int64) {
+        guard totalBytesExpectedToWrite > 0 else { return }
+        let percent = Int(totalBytesWritten * 100 / totalBytesExpectedToWrite)
+        guard percent != downloadPercent else { return }
+        downloadPercent = percent
+        notifyStatus()
+    }
+
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask,
+                    didFinishDownloadingTo location: URL) {
+        let destination = FileManager.default.temporaryDirectory
+            .appendingPathComponent("Banshell-\(pendingVersion).pkg")
+        try? FileManager.default.removeItem(at: destination)
+        let moved = (try? FileManager.default.moveItem(at: location, to: destination)) != nil
+        let version = pendingVersion
+        let autoInstall = pendingAutoInstall
+        DispatchQueue.main.async {
+            self.downloadingVersion = nil
+            guard moved else {
+                logLine("update download failed to save")
+                self.notifyStatus()
+                return
             }
+            if autoInstall {
+                self.runInstaller(at: destination, version: version)
+            } else {
+                self.readyInstaller = (destination, version)
+                logLine("update v\(version) downloaded — install off, waiting for user")
+                self.notifyStatus()
+            }
+        }
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        guard let error else { return }
+        DispatchQueue.main.async {
+            self.downloadingVersion = nil
+            logLine("update download failed: \(error.localizedDescription)")
+            self.notifyStatus()
         }
     }
 
