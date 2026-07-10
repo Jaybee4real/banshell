@@ -30,6 +30,7 @@ public class BanshellConfig
     public int[] ScheduleDays { get; set; } = { 0, 1, 2, 3, 4, 5, 6 };
     public bool IdleAutoArm { get; set; } = false;
     public int IdleMinutes { get; set; } = 10;
+    public int IdleMinutesDaytime { get; set; } = 30;
     public bool WifiTrigger { get; set; } = false;
     public bool MicTrigger { get; set; } = false;
 

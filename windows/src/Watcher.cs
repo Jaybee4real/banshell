@@ -149,7 +149,7 @@ public class Watcher : IDisposable
 
     private void CheckAutoArm()
     {
-        if (!Config.AutoArmDaily && !Config.AutoDisarmDaily) return;
+        if (!Config.AutoArmDaily && !Config.AutoDisarmDaily && !Config.IdleAutoArm) return;
         var now = DateTime.Now;
         if (!Config.ScheduleDays.Contains((int)now.DayOfWeek)) return;
         var today = now.ToString("yyyy-MM-dd");
@@ -165,12 +165,14 @@ public class Watcher : IDisposable
             state.LastAutoDisarmDay = today;
             Disarm();
         }
-        if (Config.IdleAutoArm && Config.AutoArmDaily && !state.Armed && !state.Triggered)
+        if (Config.IdleAutoArm && !state.Armed && !state.Triggered)
         {
             int nowMinutes = now.Hour * 60 + now.Minute;
             int armMinutes = Config.ArmHour * 60 + Config.ArmMinute;
             int endMinutes = Config.AutoDisarmDaily ? Config.DisarmHour * 60 + Config.DisarmMinute : armMinutes;
-            if (InWindow(nowMinutes, armMinutes, endMinutes) && SystemIdleSeconds() >= Config.IdleMinutes * 60)
+            bool inWindow = Config.AutoArmDaily && InWindow(nowMinutes, armMinutes, endMinutes);
+            int threshold = inWindow ? Config.IdleMinutes : Config.IdleMinutesDaytime;
+            if (SystemIdleSeconds() >= threshold * 60)
                 Arm();
         }
     }

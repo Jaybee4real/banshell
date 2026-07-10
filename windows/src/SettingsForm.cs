@@ -13,6 +13,7 @@ public class SettingsForm : Form
     private readonly CheckBox[] dayButtons;
     private readonly CheckBox idleAutoArmBox;
     private readonly NumericUpDown idleMinutesBox;
+    private readonly NumericUpDown daytimeIdleBox;
     private readonly CheckBox wifiBox;
     private readonly CheckBox micBox;
     private readonly CheckBox motionBox;
@@ -114,8 +115,15 @@ public class SettingsForm : Form
         idleMinutesBox.ValueChanged += (_, _) => SaveFromControls();
         idleRow.Controls.Add(idleAutoArmBox);
         idleRow.Controls.Add(idleMinutesBox);
-        idleRow.Controls.Add(new Label { Text = "min (once past the arm time)", AutoSize = true, Padding = new Padding(0, 6, 0, 0) });
+        idleRow.Controls.Add(new Label { Text = "min (inside the arm window)", AutoSize = true, Padding = new Padding(0, 6, 0, 0) });
         layout.Controls.Add(idleRow);
+
+        var daytimeIdleRow = Row();
+        daytimeIdleBox = new NumericUpDown { Minimum = 1, Maximum = 240, Value = 30, Width = 60 };
+        daytimeIdleBox.ValueChanged += (_, _) => SaveFromControls();
+        daytimeIdleRow.Controls.Add(daytimeIdleBox);
+        daytimeIdleRow.Controls.Add(new Label { Text = "min (outside the arm window)", AutoSize = true, Padding = new Padding(0, 6, 0, 0) });
+        layout.Controls.Add(daytimeIdleRow);
 
         layout.Controls.Add(Section("TRIGGERS"));
         motionBox = new CheckBox { Text = "Motion — accelerometer", AutoSize = true };
@@ -269,6 +277,7 @@ public class SettingsForm : Form
             dayButtons[index].Checked = config.ScheduleDays.Contains(index);
         idleAutoArmBox.Checked = config.IdleAutoArm;
         idleMinutesBox.Value = Math.Clamp(config.IdleMinutes, (int)idleMinutesBox.Minimum, (int)idleMinutesBox.Maximum);
+        daytimeIdleBox.Value = Math.Clamp(config.IdleMinutesDaytime, (int)daytimeIdleBox.Minimum, (int)daytimeIdleBox.Maximum);
         wifiBox.Checked = config.WifiTrigger;
         micBox.Checked = config.MicTrigger;
         motionBox.Checked = config.MotionTrigger;
@@ -303,6 +312,7 @@ public class SettingsForm : Form
         config.ScheduleDays = selectedDays.Length == 0 ? new[] { 0, 1, 2, 3, 4, 5, 6 } : selectedDays;
         config.IdleAutoArm = idleAutoArmBox.Checked;
         config.IdleMinutes = (int)idleMinutesBox.Value;
+        config.IdleMinutesDaytime = (int)daytimeIdleBox.Value;
         config.WifiTrigger = wifiBox.Checked;
         config.MicTrigger = micBox.Checked;
         config.MotionTrigger = motionBox.Checked;

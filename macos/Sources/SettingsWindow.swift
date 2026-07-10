@@ -30,6 +30,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate, NSTextFieldDel
     private var autoUpdateCheckbox: NSButton!
     private var idleAutoArmCheckbox: NSButton!
     private var idleMinutesField: NSTextField!
+    private var daytimeIdleField: NSTextField!
     private var wifiCheckbox: NSButton!
     private var micCheckbox: NSButton!
     private var micGrantButton: NSButton!
@@ -153,8 +154,20 @@ final class SettingsWindowController: NSObject, NSWindowDelegate, NSTextFieldDel
         idleMinutesField.delegate = self
         idleRow.addArrangedSubview(idleAutoArmCheckbox)
         idleRow.addArrangedSubview(idleMinutesField)
-        idleRow.addArrangedSubview(NSTextField(labelWithString: "min (once past the arm time)"))
+        idleRow.addArrangedSubview(NSTextField(labelWithString: "min (inside the arm window)"))
         stack.addArrangedSubview(idleRow)
+
+        let daytimeIdleRow = NSStackView()
+        daytimeIdleRow.orientation = .horizontal
+        daytimeIdleRow.spacing = 6
+        daytimeIdleField = NSTextField(string: "30")
+        daytimeIdleField.alignment = .center
+        daytimeIdleField.widthAnchor.constraint(equalToConstant: 44).isActive = true
+        daytimeIdleField.delegate = self
+        daytimeIdleRow.addArrangedSubview(indent())
+        daytimeIdleRow.addArrangedSubview(daytimeIdleField)
+        daytimeIdleRow.addArrangedSubview(NSTextField(labelWithString: "min (outside the arm window)"))
+        stack.addArrangedSubview(daytimeIdleRow)
 
         stack.addArrangedSubview(spacer(8))
         stack.addArrangedSubview(sectionLabel("Triggers"))
@@ -417,6 +430,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate, NSTextFieldDel
         lidClosedCheckbox.state = config.watchLidClosed ? .on : .off
         idleAutoArmCheckbox.state = config.idleAutoArmOn ? .on : .off
         idleMinutesField.stringValue = "\(config.idleArmMinutes)"
+        daytimeIdleField.stringValue = "\(config.daytimeIdleArmMinutes)"
         wifiCheckbox.state = config.wifiTriggerOn ? .on : .off
         micCheckbox.state = config.micTriggerOn ? .on : .off
         updateCameraStatus()
@@ -481,6 +495,8 @@ final class SettingsWindowController: NSObject, NSWindowDelegate, NSTextFieldDel
         config.ownerMessage = ownerMessageField.stringValue
         let minutes = max(1, min(120, Int(idleMinutesField.stringValue.filter { $0.isNumber }) ?? config.idleArmMinutes))
         config.idleMinutes = minutes
+        let daytime = max(1, min(240, Int(daytimeIdleField.stringValue.filter { $0.isNumber }) ?? config.daytimeIdleArmMinutes))
+        config.idleMinutesDaytime = daytime
         saveConfig(config)
         watcher.reloadConfig(config)
     }

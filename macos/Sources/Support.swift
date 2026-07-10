@@ -1,7 +1,7 @@
 import CryptoKit
 import Foundation
 
-let banshellVersion = "1.8.0"
+let banshellVersion = "1.9.0"
 let launchdLabel = "com.jaybee.banshell"
 
 struct Config: Codable {
@@ -31,6 +31,7 @@ struct Config: Codable {
     var scheduleDays: [Int]?
     var idleAutoArm: Bool?
     var idleMinutes: Int?
+    var idleMinutesDaytime: Int?
     var wifiTrigger: Bool?
     var micTrigger: Bool?
 
@@ -52,6 +53,7 @@ struct Config: Codable {
     var scheduledDays: Set<Int> { Set(scheduleDays ?? [1, 2, 3, 4, 5, 6, 7]) }
     var idleAutoArmOn: Bool { idleAutoArm == true }
     var idleArmMinutes: Int { idleMinutes ?? 10 }
+    var daytimeIdleArmMinutes: Int { idleMinutesDaytime ?? 30 }
     var wifiTriggerOn: Bool { wifiTrigger == true }
     var micTriggerOn: Bool { micTrigger == true }
 
