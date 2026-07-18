@@ -21,7 +21,8 @@ final class Watcher {
     private var lastStateData: Data?
     private var timer: DispatchSourceTimer?
     private var tickCounter = 0
-    private let queue = DispatchQueue(label: "banshell.watch")
+    private var appNapToken: NSObjectProtocol?
+    private let queue = DispatchQueue(label: "banshell.watch", qos: .userInitiated)
     var onChange: ((Bool, Bool) -> Void)?
 
     private(set) var uiArmed = false
@@ -43,6 +44,9 @@ final class Watcher {
 
     func start() {
         logLine("BANSHELL v\(banshellVersion) watching — armed=\(state.armed) lidSensor=\(lidSensor.available)")
+        appNapToken = ProcessInfo.processInfo.beginActivity(
+            options: .userInitiatedAllowingIdleSystemSleep,
+            reason: "BANSHELL alarm monitoring")
         if config.inputTrigger {
             inputTap.onInput = { [weak self] in
                 self?.queue.async { self?.handleInputEvent() }
