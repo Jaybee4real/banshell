@@ -108,6 +108,7 @@ final class SirenSynth {
     private var framesRendered: Double = 0
     private var phase: Double = 0
     private var running = false
+    private let fadeInSeconds: Double = 10
 
     func start() {
         guard !running else { return }
@@ -136,10 +137,11 @@ final class SirenSynth {
                     }
                 }
                 if self.phase > 2.0 * Double.pi { self.phase -= 2.0 * Double.pi }
+                let fadeGain = Float(min(1.0, timeSeconds / self.fadeInSeconds))
                 self.framesRendered += 1
                 for buffer in buffers {
                     guard let pointer = buffer.mData?.assumingMemoryBound(to: Float.self) else { continue }
-                    pointer[frame] = sample
+                    pointer[frame] = sample * fadeGain
                 }
             }
             return noErr

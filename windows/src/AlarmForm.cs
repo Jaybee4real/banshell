@@ -10,6 +10,7 @@ public class AlarmForm : Form
     private readonly System.Windows.Forms.Timer enforcerTimer;
     private readonly System.Windows.Forms.Timer focusTimer;
     private readonly System.Windows.Forms.Timer borderPulse;
+    private readonly System.Windows.Forms.Timer fadeTimer;
     private readonly AlarmKeyBlocker keyBlocker = new();
     private DateTime? entryDeadline;
     private float? savedVolume;
@@ -160,7 +161,16 @@ public class AlarmForm : Form
         borderPulse.Start();
 
         savedVolume = VolumeControl.ReadVolume();
-        VolumeControl.SetVolume(0.7f);
+        VolumeControl.SetVolume(0f);
+        var fadeStart = DateTime.UtcNow;
+        fadeTimer = new System.Windows.Forms.Timer { Interval = 100 };
+        fadeTimer.Tick += (_, _) =>
+        {
+            double elapsed = (DateTime.UtcNow - fadeStart).TotalSeconds;
+            VolumeControl.SetVolume(0.7f * (float)Math.Min(1.0, elapsed / 10.0));
+            if (elapsed >= 10.0) fadeTimer.Stop();
+        };
+        fadeTimer.Start();
         SirenAudio.PlayBeeps();
         entryDeadline = DateTime.Now.AddSeconds(config.EntryDelaySeconds);
 
@@ -206,6 +216,7 @@ public class AlarmForm : Form
         if (remaining <= 0)
         {
             entryDeadline = null;
+            fadeTimer.Stop();
             SirenAudio.PlaySiren();
             enforcerTimer.Start();
             countdownLabel.Text = "⚠  SIREN ACTIVE  ⚠";
@@ -230,6 +241,7 @@ public class AlarmForm : Form
         enforcerTimer.Stop();
         focusTimer.Stop();
         borderPulse.Stop();
+        fadeTimer.Stop();
         keyBlocker.Dispose();
         SirenAudio.Stop();
         if (savedVolume is { } volume) VolumeControl.SetVolume(volume);
