@@ -3,8 +3,17 @@ import CoreAudio
 import Foundation
 
 final class KioskWindow: NSWindow {
+    var displayID: CGDirectDisplayID = 0
+    var showsCard = false
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { true }
+}
+
+extension NSScreen {
+    var displayID: CGDirectDisplayID {
+        (deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber)
+            .map { CGDirectDisplayID(truncating: $0) } ?? 0
+    }
 }
 
 final class AlarmController: NSObject {
@@ -23,6 +32,8 @@ final class AlarmController: NSObject {
     private var sirenFlash = false
     private var isPreview = false
     private var displaysCaptured = false
+    private var alarmReason = ""
+    private var alarmConfig: Config?
     private(set) var active = false
     var onDisarm: (() -> Void)?
 
@@ -55,19 +66,14 @@ final class AlarmController: NSObject {
             }
         }
         NSApp.setActivationPolicy(.regular)
-        buildWindows(reason: reason, config: config)
+        alarmReason = reason
+        alarmConfig = config
+        syncWindowsToScreens()
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(screensChanged),
+            name: NSApplication.didChangeScreenParametersNotification, object: nil)
         if !preview { synth.start() }
-        if CGCaptureAllDisplays() == .success {
-            displaysCaptured = true
-            let shieldLevel = NSWindow.Level(rawValue: Int(CGShieldingWindowLevel()) + 1)
-            for window in windows {
-                window.level = shieldLevel
-                window.orderFrontRegardless()
-            }
-            logLine(preview ? "displays captured (preview)" : "displays captured — space switching disabled")
-        } else {
-            logLine("WARNING: could not capture displays — full-screen apps may escape the lock via space switching")
-        }
+        captureDisplays(firstTime: true)
         entryDeadline = Date().addingTimeInterval(Double(config?.entryDelaySeconds ?? 15))
         countdownTimer = Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
             self?.tickCountdown()
@@ -78,10 +84,71 @@ final class AlarmController: NSObject {
         reassertFocus()
     }
 
-    private func buildWindows(reason: String, config: Config?) {
-        for screen in NSScreen.screens {
+    private func captureDisplays(firstTime: Bool) {
+        if CGCaptureAllDisplays() == .success {
+            displaysCaptured = true
+            let shieldLevel = NSWindow.Level(rawValue: Int(CGShieldingWindowLevel()) + 1)
+            for window in windows {
+                window.level = shieldLevel
+                window.orderFrontRegardless()
+            }
+            if firstTime {
+                logLine(isPreview ? "displays captured (preview)" : "displays captured — space switching disabled")
+            }
+        } else if firstTime {
+            logLine("WARNING: could not capture displays — full-screen apps may escape the lock via space switching")
+        }
+    }
+
+    @objc private func screensChanged() {
+        guard active else { return }
+        syncWindowsToScreens()
+        captureDisplays(firstTime: false)
+        reassertFocus()
+    }
+
+    // Idempotent: covers every screen present right now, resizes windows whose display
+    // was rearranged, drops windows for displays that went away, and keeps the card (and
+    // with it the only PIN field) on a display that still exists.
+    private func syncWindowsToScreens() {
+        let screens = NSScreen.screens
+        guard !screens.isEmpty else { return }
+        let liveIDs = Set(screens.map(\.displayID))
+
+        for window in windows where !liveIDs.contains(window.displayID) {
+            if window.showsCard {
+                pinField = nil
+                countdownLabel = nil
+                reasonLabel = nil
+            }
+            window.orderOut(nil)
+            window.close()
+        }
+        windows.removeAll { !liveIDs.contains($0.displayID) }
+
+        let cardScreenID = windows.first(where: { $0.showsCard })?.displayID
+        let wantsCardOn = cardScreenID ?? (NSScreen.main?.displayID ?? screens[0].displayID)
+
+        for screen in screens {
+            let wantsCard = screen.displayID == wantsCardOn
+            if let existing = windows.first(where: { $0.displayID == screen.displayID }) {
+                if existing.frame != screen.frame {
+                    existing.setFrame(screen.frame, display: true)
+                    existing.contentView = buildContent(size: screen.frame.size, reason: alarmReason,
+                                                        config: alarmConfig, showCard: existing.showsCard)
+                }
+                if wantsCard && !existing.showsCard {
+                    existing.showsCard = true
+                    existing.contentView = buildContent(size: screen.frame.size, reason: alarmReason,
+                                                        config: alarmConfig, showCard: true)
+                }
+                existing.orderFrontRegardless()
+                continue
+            }
             let window = KioskWindow(contentRect: screen.frame, styleMask: .borderless,
                                      backing: .buffered, defer: false)
+            window.displayID = screen.displayID
+            window.showsCard = wantsCard
             window.isReleasedWhenClosed = false
             window.level = NSWindow.Level(rawValue: Int(CGShieldingWindowLevel()) + 1)
             window.backgroundColor = NSColor.black
@@ -89,11 +156,17 @@ final class AlarmController: NSObject {
             window.appearance = NSAppearance(named: .darkAqua)
             window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
             window.setFrame(screen.frame, display: true)
-            let isMain = screen == NSScreen.main
-            window.contentView = buildContent(size: screen.frame.size, reason: reason,
-                                              config: config, showCard: isMain)
+            window.contentView = buildContent(size: screen.frame.size, reason: alarmReason,
+                                              config: alarmConfig, showCard: wantsCard)
             window.orderFrontRegardless()
             windows.append(window)
+        }
+
+        if pinField == nil, let fallback = windows.first {
+            fallback.showsCard = true
+            fallback.contentView = buildContent(size: fallback.frame.size, reason: alarmReason,
+                                                config: alarmConfig, showCard: true)
+            fallback.orderFrontRegardless()
         }
     }
 
@@ -317,6 +390,8 @@ final class AlarmController: NSObject {
     func end() {
         guard active else { return }
         if !isPreview { logLine("correct code — alarm disarmed") }
+        NotificationCenter.default.removeObserver(
+            self, name: NSApplication.didChangeScreenParametersNotification, object: nil)
         enforcerTimer?.invalidate()
         countdownTimer?.invalidate()
         focusTimer?.invalidate()
@@ -340,6 +415,10 @@ final class AlarmController: NSObject {
             window.close()
         }
         windows = []
+        alarmConfig = nil
+        alarmReason = ""
+        countdownLabel = nil
+        reasonLabel = nil
         pinField = nil
         if displaysCaptured {
             CGReleaseAllDisplays()

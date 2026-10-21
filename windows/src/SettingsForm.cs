@@ -191,7 +191,7 @@ public class SettingsForm : Form
         exitDelay.ValueChanged += (_, _) => SaveFromControls();
         timingRow.Controls.Add(exitDelay);
         timingRow.Controls.Add(new Label { Text = "  Siren delay (s)", AutoSize = true, Padding = new Padding(0, 6, 0, 0) });
-        entryDelay = new NumericUpDown { Minimum = 3, Maximum = 60, Width = 70 };
+        entryDelay = new NumericUpDown { Minimum = 3, Maximum = 90, Width = 70 };
         entryDelay.ValueChanged += (_, _) => SaveFromControls();
         timingRow.Controls.Add(entryDelay);
         layout.Controls.Add(timingRow);

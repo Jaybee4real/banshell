@@ -12,6 +12,7 @@ public class AlarmForm : Form
     private readonly System.Windows.Forms.Timer borderPulse;
     private readonly System.Windows.Forms.Timer fadeTimer;
     private readonly AlarmKeyBlocker keyBlocker = new();
+    private readonly List<BlackoutForm> blackouts = new();
     private DateTime? entryDeadline;
     private float? savedVolume;
     private bool disarmed;
@@ -23,6 +24,8 @@ public class AlarmForm : Form
     {
         this.config = config;
         FormBorderStyle = FormBorderStyle.None;
+        StartPosition = FormStartPosition.Manual;
+        Bounds = (Screen.PrimaryScreen ?? Screen.AllScreens[0]).Bounds;
         WindowState = FormWindowState.Maximized;
         TopMost = true;
         BackColor = Color.Black;
@@ -157,6 +160,7 @@ public class AlarmForm : Form
         {
             pulseOn = !pulseOn;
             BackColor = pulseOn ? Color.FromArgb(230, 30, 30) : Color.FromArgb(90, 10, 10);
+            foreach (var blackout in blackouts) blackout.SetPulse(pulseOn);
         };
         borderPulse.Start();
 
@@ -185,6 +189,11 @@ public class AlarmForm : Form
         focusTimer.Tick += (_, _) =>
         {
             TopMost = true;
+            foreach (var blackout in blackouts)
+            {
+                blackout.TopMost = true;
+                blackout.BringToFront();
+            }
             if (Form.ActiveForm != this) Activate();
             if (!pinBox.Focused)
             {
@@ -197,12 +206,74 @@ public class AlarmForm : Form
 
         keyBlocker.Start();
 
-        Shown += (_, _) => pinBox.Focus();
+        Shown += (_, _) =>
+        {
+            pinBox.Focus();
+            SyncBlackouts();
+        };
+        Microsoft.Win32.SystemEvents.DisplaySettingsChanged += OnDisplaySettingsChanged;
         FormClosing += (_, args) =>
         {
             if (!disarmed) args.Cancel = true;
         };
-        FormClosed += (_, _) => keyBlocker.Dispose();
+        FormClosed += (_, _) =>
+        {
+            Microsoft.Win32.SystemEvents.DisplaySettingsChanged -= OnDisplaySettingsChanged;
+            keyBlocker.Dispose();
+            CloseBlackouts();
+        };
+    }
+
+    private void OnDisplaySettingsChanged(object? sender, EventArgs e)
+    {
+        if (disarmed || IsDisposed) return;
+        if (InvokeRequired) { BeginInvoke(new Action(SyncBlackouts)); return; }
+        SyncBlackouts();
+    }
+
+    // Idempotent: one blackout per non-primary monitor, resized when the arrangement
+    // changes, removed when a monitor is unplugged. The alarm form keeps the primary.
+    private void SyncBlackouts()
+    {
+        if (disarmed || IsDisposed) return;
+        var primary = (Screen.PrimaryScreen ?? Screen.AllScreens[0]).DeviceName;
+        Bounds = (Screen.PrimaryScreen ?? Screen.AllScreens[0]).Bounds;
+
+        var wanted = Screen.AllScreens.Where(screen => screen.DeviceName != primary).ToList();
+        var stale = blackouts.Where(blackout =>
+            !wanted.Any(screen => screen.Bounds == blackout.Bounds)).ToList();
+        foreach (var blackout in stale)
+        {
+            blackouts.Remove(blackout);
+            blackout.CloseForReal();
+            blackout.Dispose();
+        }
+
+        foreach (var screen in wanted)
+        {
+            if (blackouts.Any(blackout => blackout.Bounds == screen.Bounds)) continue;
+            var blackout = new BlackoutForm(screen.Bounds);
+            blackouts.Add(blackout);
+            blackout.Show();
+        }
+        foreach (var blackout in blackouts)
+        {
+            blackout.SetPulse(pulseOn);
+            blackout.TopMost = true;
+            blackout.BringToFront();
+        }
+        Activate();
+        pinBox.Focus();
+    }
+
+    private void CloseBlackouts()
+    {
+        foreach (var blackout in blackouts)
+        {
+            blackout.CloseForReal();
+            blackout.Dispose();
+        }
+        blackouts.Clear();
     }
 
     private void TickCountdown()

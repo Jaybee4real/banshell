@@ -49,7 +49,13 @@ final class SettingsWindowController: NSObject, NSWindowDelegate, NSTextFieldDel
     private var sudoNotice: (message: String, until: Date)?
 
     private let exitChoices = [10, 30, 60, 120]
-    private let entryChoices = [5, 10, 15, 30]
+    private let entryChoices = [5, 10, 15, 30, 45, 60, 90]
+
+    private static func delayLabel(_ seconds: Int) -> String {
+        guard seconds >= 60 else { return "\(seconds)s" }
+        let minutes = seconds / 60, rest = seconds % 60
+        return rest == 0 ? "\(minutes)m" : "\(minutes)m \(rest)s"
+    }
 
     init(watcher: Watcher) {
         self.watcher = watcher
@@ -263,11 +269,11 @@ final class SettingsWindowController: NSObject, NSWindowDelegate, NSTextFieldDel
         timingRow.orientation = .horizontal
         timingRow.spacing = 8
         exitDelayPopup = NSPopUpButton()
-        for choice in exitChoices { exitDelayPopup.addItem(withTitle: "\(choice)s") }
+        for choice in exitChoices { exitDelayPopup.addItem(withTitle: Self.delayLabel(choice)) }
         exitDelayPopup.target = self
         exitDelayPopup.action = #selector(controlChanged)
         entryDelayPopup = NSPopUpButton()
-        for choice in entryChoices { entryDelayPopup.addItem(withTitle: "\(choice)s") }
+        for choice in entryChoices { entryDelayPopup.addItem(withTitle: Self.delayLabel(choice)) }
         entryDelayPopup.target = self
         entryDelayPopup.action = #selector(controlChanged)
         timingRow.addArrangedSubview(NSTextField(labelWithString: "Walk-away delay"))
