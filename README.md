@@ -1,3 +1,5 @@
+<img src=".github/banner.png" alt="Banshell by Novacraft" width="100%">
+
 # BANSHELL
 
 **Breach-Activated Noise Siren Halting Equipment Loss on Laptops.**
