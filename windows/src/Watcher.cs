@@ -26,6 +26,8 @@ public class Watcher : IDisposable
     private bool? powerBaselineOnline;
     private DateTime? monitoringStartsAt;
     private int tickCounter;
+    private DateTime lastTickAt = DateTime.Now;
+    private DateTime awakeSince = DateTime.Now;
 
     public event Action<string>? AlarmRequested;
     public event Action? StateChanged;
@@ -57,12 +59,13 @@ public class Watcher : IDisposable
 
     public void ReloadConfig(BanshellConfig newConfig) => Config = newConfig;
 
-    public void Arm()
+    public void Arm(string source = "manual")
     {
         if (state.Armed) return;
         state.Armed = true;
         state.Triggered = false;
         state.Reason = null;
+        state.ArmSource = source;
         accelBaseline = null;
         powerBaselineOnline = null;
         monitoringStartsAt = DateTime.Now.AddSeconds(Config.ExitDelaySeconds);
@@ -76,6 +79,7 @@ public class Watcher : IDisposable
         state.Armed = false;
         state.Triggered = false;
         state.Reason = null;
+        state.ArmSource = null;
         accelBaseline = null;
         powerBaselineOnline = null;
         wifiBaselineConnected = null;
@@ -114,6 +118,9 @@ public class Watcher : IDisposable
     private void Tick()
     {
         tickCounter++;
+        var tickNow = DateTime.Now;
+        if ((tickNow - lastTickAt).TotalSeconds > 5) awakeSince = tickNow;
+        lastTickAt = tickNow;
         CheckAutoArm();
         if (!state.Armed || state.Triggered) return;
         if (monitoringStartsAt == null || DateTime.Now < monitoringStartsAt) return;
@@ -151,13 +158,24 @@ public class Watcher : IDisposable
     {
         if (!Config.AutoArmDaily && !Config.AutoDisarmDaily && !Config.IdleAutoArm && !Config.IdleAutoArmDaytime) return;
         var now = DateTime.Now;
-        if (!Config.ScheduleDays.Contains((int)now.DayOfWeek)) return;
         var today = now.ToString("yyyy-MM-dd");
+        int nowMinutes = now.Hour * 60 + now.Minute;
+        int armMinutes = Config.ArmHour * 60 + Config.ArmMinute;
+        int endMinutes = Config.AutoDisarmDaily ? Config.DisarmHour * 60 + Config.DisarmMinute : armMinutes;
+        bool inWindow = Config.AutoArmDaily && InWindow(nowMinutes, armMinutes, endMinutes);
+        if (Config.AutoArmDaily && Config.AutoDisarmDaily && state.Armed && !state.Triggered && !inWindow
+            && (state.ArmSource == "schedule" || state.ArmSource == "idle"))
+        {
+            state.LastAutoDisarmDay = today;
+            Disarm();
+            return;
+        }
+        if (!Config.ScheduleDays.Contains((int)now.DayOfWeek)) return;
         if (Config.AutoArmDaily && !state.Armed && !state.Triggered
             && now.Hour == Config.ArmHour && now.Minute == Config.ArmMinute && state.LastAutoArmDay != today)
         {
             state.LastAutoArmDay = today;
-            Arm();
+            Arm("schedule");
         }
         if (Config.AutoDisarmDaily && state.Armed && !state.Triggered
             && now.Hour == Config.DisarmHour && now.Minute == Config.DisarmMinute && state.LastAutoDisarmDay != today)
@@ -167,14 +185,11 @@ public class Watcher : IDisposable
         }
         if (!state.Armed && !state.Triggered)
         {
-            int nowMinutes = now.Hour * 60 + now.Minute;
-            int armMinutes = Config.ArmHour * 60 + Config.ArmMinute;
-            int endMinutes = Config.AutoDisarmDaily ? Config.DisarmHour * 60 + Config.DisarmMinute : armMinutes;
-            bool inWindow = Config.AutoArmDaily && InWindow(nowMinutes, armMinutes, endMinutes);
             bool enabled = inWindow ? Config.IdleAutoArm : Config.IdleAutoArmDaytime;
             int threshold = inWindow ? Config.IdleMinutes : Config.IdleMinutesDaytime;
-            if (enabled && SystemIdleSeconds() >= threshold * 60)
-                Arm();
+            double idleSeconds = Math.Min(SystemIdleSeconds(), (now - awakeSince).TotalSeconds);
+            if (enabled && idleSeconds >= threshold * 60)
+                Arm(inWindow ? "idle" : "idle-daytime");
         }
     }
 

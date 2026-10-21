@@ -1,7 +1,7 @@
 import CryptoKit
 import Foundation
 
-let banshellVersion = "1.11.2"
+let banshellVersion = "1.12.0"
 let launchdLabel = "com.jaybee.banshell"
 
 struct Config: Codable {
@@ -81,6 +81,7 @@ struct AlarmState: Codable {
     var lastAutoArmDay: String?
     var lastAutoDisarmDay: String?
     var reason: String?
+    var armSource: String? = nil
 }
 
 enum Paths {

@@ -102,4 +102,5 @@ public class BanshellState
     public string? LastAutoArmDay { get; set; }
     public string? LastAutoDisarmDay { get; set; }
     public string? Reason { get; set; }
+    public string? ArmSource { get; set; }
 }

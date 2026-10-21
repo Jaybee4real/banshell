@@ -21,6 +21,8 @@ final class Watcher {
     private var lastStateData: Data?
     private var timer: DispatchSourceTimer?
     private var tickCounter = 0
+    private var lastTickAt = Date()
+    private var awakeSince = Date()
     private var appNapToken: NSObjectProtocol?
     private let queue = DispatchQueue(label: "banshell.watch", qos: .userInitiated)
     var onChange: ((Bool, Bool) -> Void)?
@@ -90,7 +92,7 @@ final class Watcher {
     func armNow() {
         queue.async {
             guard !self.state.armed else { return }
-            self.applyArm()
+            self.applyArm(source: "manual")
             logLine("armed from menu")
         }
     }
@@ -122,7 +124,14 @@ final class Watcher {
 
     private func tick() {
         tickCounter += 1
-        if tickCounter % 20 == 0 {
+        let now = Date()
+        let woke = now.timeIntervalSince(lastTickAt) > 5
+        lastTickAt = now
+        if woke {
+            awakeSince = now
+            logLine("system woke — idle timer reset")
+        }
+        if woke || tickCounter % 20 == 0 {
             checkExternalState()
             checkAutoArm()
         }
@@ -236,12 +245,23 @@ final class Watcher {
         formatter.dateFormat = "yyyy-MM-dd"
         let today = formatter.string(from: Date())
         let components = Calendar.current.dateComponents([.hour, .minute, .weekday], from: Date())
+        let nowMinutes = (components.hour ?? 0) * 60 + (components.minute ?? 0)
+        let armMinutes = config.armHour * 60 + config.armMinute
+        let endMinutes = config.autoDisarmOn ? config.disarmH * 60 + config.disarmM : armMinutes
+        let inWindow = config.autoArmDaily && timeInWindow(nowMinutes, armMinutes, endMinutes)
+        if config.autoArmDaily, config.autoDisarmOn, state.armed, !state.triggered, !inWindow,
+           state.armSource == "schedule" || state.armSource == "idle" {
+            state.lastAutoDisarmDay = today
+            applyDisarm()
+            logLine("auto-disarmed — arm window ended (\(config.disarmH):\(String(format: "%02d", config.disarmM)))")
+            return
+        }
         guard let weekday = components.weekday, config.scheduledDays.contains(weekday) else { return }
         if config.autoArmDaily, !state.armed, !state.triggered,
            components.hour == config.armHour, components.minute == config.armMinute,
            state.lastAutoArmDay != today {
             state.lastAutoArmDay = today
-            applyArm()
+            applyArm(source: "schedule")
             logLine("auto-armed on schedule (\(config.armHour):\(String(format: "%02d", config.armMinute)))")
         }
         if config.autoDisarmOn, state.armed, !state.triggered,
@@ -252,14 +272,11 @@ final class Watcher {
             logLine("auto-disarmed on schedule (\(config.disarmH):\(String(format: "%02d", config.disarmM)))")
         }
         if !state.armed, !state.triggered {
-            let nowMinutes = (components.hour ?? 0) * 60 + (components.minute ?? 0)
-            let armMinutes = config.armHour * 60 + config.armMinute
-            let endMinutes = config.autoDisarmOn ? config.disarmH * 60 + config.disarmM : armMinutes
-            let inWindow = config.autoArmDaily && timeInWindow(nowMinutes, armMinutes, endMinutes)
             let enabled = inWindow ? config.idleAutoArmOn : config.idleAutoArmDaytimeOn
             let threshold = inWindow ? config.idleArmMinutes : config.daytimeIdleArmMinutes
-            if enabled, systemIdleSeconds() >= Double(threshold * 60) {
-                applyArm()
+            let idleSeconds = min(systemIdleSeconds(), Date().timeIntervalSince(awakeSince))
+            if enabled, idleSeconds >= Double(threshold * 60) {
+                applyArm(source: inWindow ? "idle" : "idle-daytime")
                 logLine("idle auto-arm — no use for \(threshold)min (\(inWindow ? "in" : "outside") arm window)")
             }
         }
@@ -287,7 +304,7 @@ final class Watcher {
         }
         if external.armed, !state.armed {
             state.lastAutoArmDay = external.lastAutoArmDay
-            applyArm()
+            applyArm(source: "command")
             logLine("armed by command")
         } else if !external.armed, state.armed {
             applyDisarm()
@@ -295,10 +312,11 @@ final class Watcher {
         }
     }
 
-    private func applyArm() {
+    private func applyArm(source: String) {
         state.armed = true
         state.triggered = false
         state.reason = nil
+        state.armSource = source
         lidBaseline = nil
         powerBaselineAC = nil
         monitoringStartsAt = Date().addingTimeInterval(Double(config.exitDelaySeconds))
@@ -325,6 +343,7 @@ final class Watcher {
         state.armed = false
         state.triggered = false
         state.reason = nil
+        state.armSource = nil
         lidBaseline = nil
         powerBaselineAC = nil
         monitoringStartsAt = nil
